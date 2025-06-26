@@ -1,0 +1,15 @@
+# Ignore only backend and frontend .env
+backend/.env
+frontend/.env
+
+# Ignore node_modules
+backend/node_modules/
+frontend/node_modules/
+
+# Ignore dist, logs, etc
+frontend/dist/
+*.log
+.DS_Store
+
+# Optional: editor configs
+.vscode/
