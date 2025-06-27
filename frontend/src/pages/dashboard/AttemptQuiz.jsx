@@ -9,25 +9,29 @@ function AttemptQuiz() {
     const [answers, setAnswers] = useState([]);
     const [popup, setPopup] = useState({ message: "", type: "success" });
     const navigate = useNavigate();
+    const user = JSON.parse(localStorage.getItem("user"));
+    const role = user?.role || "user";
 
     useEffect(() => {
         const fetchQuiz = async () => {
             try {
                 const token = localStorage.getItem("token");
-                console.log("Fetching quiz with ID:", quizId, "token:", token); // Debug
+                console.log("Fetching quiz with ID:", quizId, "token:", token);
                 const res = await API.get(`/quiz/${quizId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                console.log("Fetched quiz:", res.data); // Debug
+                console.log("Fetched quiz:", res.data);
                 setQuiz(res.data);
-                setAnswers(new Array(res.data.questions.length).fill(null));
+                if (role === "user") {
+                    setAnswers(new Array(res.data.questions.length).fill(null));
+                }
             } catch (err) {
-                console.error("Fetch quiz error:", err.response?.data || err.message); // Debug
+                console.error("Fetch quiz error:", err.response?.data || err.message);
                 setPopup({ message: err.response?.data?.msg || "Error loading quiz", type: "error" });
             }
         };
         fetchQuiz();
-    }, [quizId]);
+    }, [quizId, role]);
 
     const handleOptionChange = (qIndex, optIndex) => {
         const copy = [...answers];
@@ -38,17 +42,17 @@ function AttemptQuiz() {
     const handleSubmit = async () => {
         try {
             const token = localStorage.getItem("token");
-            console.log("Submitting quiz:", { quizId, answers, token }); // Debug
+            console.log("Submitting quiz:", { quizId, answers, token });
             const res = await API.post(
                 "/result/submit",
                 { quizId, answers },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            console.log("Submit response:", res.data); // Debug
+            console.log("Submit response:", res.data);
             setPopup({ message: `Your Score: ${res.data.score}/${res.data.total}`, type: "success" });
             setTimeout(() => navigate("/dashboard/result"), 2000);
         } catch (err) {
-            console.error("Submit quiz error:", err.response?.data || err.message); // Debug
+            console.error("Submit quiz error:", err.response?.data || err.message);
             setPopup({ message: err.response?.data?.msg || "Submission failed", type: "error" });
         }
     };
@@ -58,6 +62,31 @@ function AttemptQuiz() {
     };
 
     if (!quiz) return <p>Loading...</p>;
+
+    if (role === "admin") {
+        return (
+            <div className="relative space-y-6">
+                <Popup message={popup.message} type={popup.type} onClose={closePopup} />
+                <h2 className="text-2xl font-bold">{quiz.title} (View Only)</h2>
+                {quiz.questions.map((q, i) => (
+                    <div key={q._id || i} className="p-4 border rounded bg-white">
+                        <p className="font-semibold">{i + 1}. {q.question}</p>
+                        {q.options.map((opt, j) => (
+                            <p key={j} className="ml-2">
+                                {j + 1}. {opt} {q.answer === j ? "(Correct)" : ""}
+                            </p>
+                        ))}
+                    </div>
+                ))}
+                <button
+                    onClick={() => navigate("/dashboard")}
+                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                >
+                    Back to Dashboard
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="relative space-y-6">

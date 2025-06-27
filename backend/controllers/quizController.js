@@ -17,7 +17,9 @@ const createQuiz = async (req, res) => {
 
 const getAllQuizzes = async (req, res) => {
     try {
-        const quizzes = await Quiz.find().select("-questions.answer");
+        const quizzes = await Quiz.find()
+            .select("-questions.answer")
+            .populate("createdBy", "email");
         res.json(quizzes);
     } catch (err) {
         console.error("Get all quizzes error:", err);
@@ -27,7 +29,7 @@ const getAllQuizzes = async (req, res) => {
 
 const getQuiz = async (req, res) => {
     try {
-        const quiz = await Quiz.findById(req.params.quizId);
+        const quiz = await Quiz.findById(req.params.quizId).populate("createdBy", "email");
         if (!quiz) return res.status(404).json({ msg: "Quiz not found" });
         if (req.user.role !== "admin") {
             quiz.questions = quiz.questions.map((q) => ({ ...q._doc, answer: undefined }));
@@ -61,7 +63,7 @@ const deleteQuiz = async (req, res) => {
     try {
         const quiz = await Quiz.findByIdAndDelete(req.params.quizId);
         if (!quiz) return res.status(404).json({ msg: "Quiz not found" });
-        await Result.deleteMany({ quiz: req.params.quizId }); // Delete associated results
+        await Result.deleteMany({ quiz: req.params.quizId });
         res.json({ msg: "Quiz deleted" });
     } catch (err) {
         console.error("Delete quiz error:", err);

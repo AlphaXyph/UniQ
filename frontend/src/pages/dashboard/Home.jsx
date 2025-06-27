@@ -14,14 +14,14 @@ function Home() {
     const fetchQuizzes = async () => {
         try {
             const token = localStorage.getItem("token");
-            console.log("Fetching quizzes with token:", token); // Debug
+            console.log("Fetching quizzes with token:", token);
             const res = await API.get("/quiz/all", {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            console.log("Fetched quizzes:", res.data); // Debug
+            console.log("Fetched quizzes:", res.data);
             setQuizzes(res.data);
         } catch (err) {
-            console.error("Fetch quizzes error:", err.response?.data || err.message); // Debug
+            console.error("Fetch quizzes error:", err.response?.data || err.message);
             setPopup({ message: err.response?.data?.msg || "Error loading quizzes", type: "error" });
         }
     };
@@ -31,27 +31,27 @@ function Home() {
     }, []);
 
     const handleEdit = (quizId) => {
-        console.log("Navigating to edit:", quizId); // Debug
+        console.log("Navigating to edit:", quizId);
         navigate(`/dashboard/edit/${quizId}`);
     };
 
     const handleDelete = (quizId) => {
-        console.log("Initiating delete for quiz:", quizId); // Debug
+        console.log("Initiating delete for quiz:", quizId);
         setDeleteConfirm({ show: true, quizId });
     };
 
     const confirmDelete = async () => {
         try {
             const token = localStorage.getItem("token");
-            console.log("Deleting quiz:", deleteConfirm.quizId, "with token:", token); // Debug
+            console.log("Deleting quiz:", deleteConfirm.quizId, "with token:", token);
             const response = await API.delete(`/quiz/${deleteConfirm.quizId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            console.log("Delete response:", response.data); // Debug
+            console.log("Delete response:", response.data);
             setPopup({ message: "Quiz deleted", type: "success" });
             fetchQuizzes();
         } catch (err) {
-            console.error("Delete quiz error:", err.response?.data || err.message); // Debug
+            console.error("Delete quiz error:", err.response?.data || err.message);
             setPopup({ message: err.response?.data?.msg || "Error deleting quiz", type: "error" });
         }
         setDeleteConfirm({ show: false, quizId: null });
@@ -83,10 +83,17 @@ function Home() {
                         <div className="flex justify-between items-center">
                             <div>
                                 <strong className="text-lg">{q.title}</strong>
+                                <p className="text-sm text-blue-500">Posted by: {q.createdBy?.email || "Unknown"}</p>
                                 <p className="text-sm text-gray-600">Total Questions: {q.questions.length}</p>
-                                <Link to={`/dashboard/attempt/${q._id}`} className="text-blue-600 underline">
-                                    Attempt Quiz
-                                </Link>
+                                {role === "user" ? (
+                                    <Link to={`/dashboard/attempt/${q._id}`} className="text-blue-600 underline">
+                                        Attempt Quiz
+                                    </Link>
+                                ) : (
+                                    <Link to={`/dashboard/attempt/${q._id}`} className="text-blue-600 underline">
+                                        View Quiz
+                                    </Link>
+                                )}
                             </div>
                             {role === "admin" && (
                                 <div className="flex gap-2">
