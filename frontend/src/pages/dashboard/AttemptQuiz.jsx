@@ -3,56 +3,151 @@ import { useParams, useNavigate } from "react-router-dom";
 import API from "../../../api";
 import Popup from "../../components/popup";
 
-function AttemptQuiz() {
+function AttemptQuiz({ setIsQuizActive }) {
     const { quizId } = useParams();
     const [quiz, setQuiz] = useState(null);
     const [answers, setAnswers] = useState([]);
-    const [popup, setPopup] = useState({ message: "", type: "success" });
-    const [isStarted, setIsStarted] = useState(false); // Track if quiz has started
-    const [timeLeft, setTimeLeft] = useState(null); // Timer in seconds
+    const [popup, setPopup] = useState({ message: "", type: "success", confirmAction: null });
+    const [isStarted, setIsStarted] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(null);
+    const [violationCount, setViolationCount] = useState(0);
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem("user"));
     const role = user?.role || "user";
+    const MAX_VIOLATIONS = 3; // Reduced to make it stricter
 
     useEffect(() => {
         const fetchQuiz = async () => {
             try {
                 const token = localStorage.getItem("token");
-                console.log("Fetching quiz with ID:", quizId, "token:", token);
                 const res = await API.get(`/quiz/${quizId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                console.log("Fetched quiz:", res.data);
                 setQuiz(res.data);
                 if (role === "user") {
                     setAnswers(new Array(res.data.questions.length).fill(null));
-                    setTimeLeft(res.data.timer * 60); // Convert minutes to seconds
+                    setTimeLeft(res.data.timer * 60);
                 }
             } catch (err) {
-                console.error("Fetch quiz error:", err.response?.data || err.message);
-                setPopup({ message: err.response?.data?.msg || "Error loading quiz", type: "error" });
+                setPopup({ message: err.response?.data?.msg || "Error loading quiz", type: "error", confirmAction: null });
             }
         };
         fetchQuiz();
     }, [quizId, role]);
 
-    const handleSubmit = useCallback(async () => {
-        try {
-            const token = localStorage.getItem("token");
-            console.log("Submitting quiz:", { quizId, answers, token });
-            const res = await API.post(
-                "/result/submit",
-                { quizId, answers },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            console.log("Submit response:", res.data);
-            setPopup({ message: `Your Score: ${res.data.score}/${res.data.total}`, type: "success" });
-            setTimeout(() => navigate("/dashboard/result"), 2000);
-        } catch (err) {
-            console.error("Submit quiz error:", err.response?.data || err.message);
-            setPopup({ message: err.response?.data?.msg || "Submission failed", type: "error" });
+    const handleSubmit = useCallback(
+        async (isAutoSubmit = false) => {
+            if (!isAutoSubmit) {
+                const unansweredIndex = answers.findIndex((ans) => ans === null);
+                if (unansweredIndex !== -1) {
+                    setPopup({
+                        message: `You haven't answered Question no. ${unansweredIndex + 1}.<br />Please answer all questions before submitting.`,
+                        type: "error",
+                        confirmAction: null,
+                    });
+                    return;
+                }
+            }
+
+            try {
+                const token = localStorage.getItem("token");
+                await API.post(
+                    "/result/submit",
+                    { quizId, answers },
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                setPopup({ message: "Your test was submitted successfully", type: "success", confirmAction: null });
+                document.exitFullscreen?.();
+                setIsQuizActive(false);
+                setTimeout(() => navigate("/dashboard/result"), 2000);
+            } catch (err) {
+                setPopup({ message: err.response?.data?.msg || "Submission failed", type: "error", confirmAction: null });
+            }
+        },
+        [quizId, answers, navigate, setIsQuizActive]
+    );
+
+    const enforceFullscreen = useCallback(() => {
+        const elem = document.documentElement;
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen({ navigationUI: "hide" });
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
         }
-    }, [quizId, answers, navigate]);
+    }, []);
+
+    useEffect(() => {
+        if (isStarted && role === "user") {
+            enforceFullscreen();
+            setIsQuizActive(true);
+
+            const handleViolation = (type) => {
+                if (violationCount < MAX_VIOLATIONS) {
+                    setViolationCount((prev) => prev + 1);
+                    setPopup({
+                        message: `${type} detected! Stay in fullscreen and on this tab.<br />Attempts left: ${MAX_VIOLATIONS - violationCount - 1}`,
+                        type: "error",
+                        confirmAction: null,
+                    });
+                    enforceFullscreen();
+                } else {
+                    setPopup({
+                        message: "Too many attempts to leave the quiz. Submitting now.",
+                        type: "error",
+                        confirmAction: null,
+                    });
+                    handleSubmit(true);
+                }
+            };
+
+            const fullscreenChange = () => {
+                if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                    handleViolation("Fullscreen exit");
+                }
+            };
+
+            const visibilityChange = () => {
+                if (document.hidden) {
+                    handleViolation("Tab switch or minimization");
+                }
+            };
+
+            const handleBlur = () => handleViolation("Window lost focus");
+            const handleFocus = () => enforceFullscreen();
+            const handleKeyDown = (e) => {
+                if (e.key === "Escape" || e.key === "Tab" || (e.altKey && e.key === "Tab")) {
+                    e.preventDefault();
+                    handleViolation("Keyboard shortcut");
+                }
+            };
+
+            document.addEventListener("fullscreenchange", fullscreenChange);
+            document.addEventListener("webkitfullscreenchange", fullscreenChange);
+            document.addEventListener("msfullscreenchange", fullscreenChange);
+            document.addEventListener("visibilitychange", visibilityChange);
+            window.addEventListener("blur", handleBlur);
+            window.addEventListener("focus", handleFocus);
+            document.addEventListener("keydown", handleKeyDown);
+
+            const interval = setInterval(enforceFullscreen, 100); // Check every 100ms
+
+            return () => {
+                document.removeEventListener("fullscreenchange", fullscreenChange);
+                document.removeEventListener("webkitfullscreenchange", fullscreenChange);
+                document.removeEventListener("msfullscreenchange", fullscreenChange);
+                document.removeEventListener("visibilitychange", visibilityChange);
+                window.removeEventListener("blur", handleBlur);
+                window.removeEventListener("focus", handleFocus);
+                document.removeEventListener("keydown", handleKeyDown);
+                clearInterval(interval);
+                setIsQuizActive(false);
+            };
+        }
+    }, [isStarted, role, violationCount, enforceFullscreen, handleSubmit, setIsQuizActive]);
 
     useEffect(() => {
         if (role === "user" && isStarted && timeLeft > 0) {
@@ -60,7 +155,7 @@ function AttemptQuiz() {
                 setTimeLeft((prev) => {
                     if (prev <= 1) {
                         clearInterval(timerId);
-                        handleSubmit();
+                        handleSubmit(true);
                         return 0;
                     }
                     return prev - 1;
@@ -68,7 +163,7 @@ function AttemptQuiz() {
             }, 1000);
             return () => clearInterval(timerId);
         }
-    }, [isStarted, timeLeft, role, handleSubmit]); // Added handleSubmit
+    }, [isStarted, timeLeft, role, handleSubmit]);
 
     const handleOptionChange = (qIndex, optIndex) => {
         const copy = [...answers];
@@ -76,37 +171,25 @@ function AttemptQuiz() {
         setAnswers(copy);
     };
 
-    const closePopup = () => {
-        setPopup({ message: "", type: "success" });
-    };
-
-    const formatTime = (seconds) => {
-        const minutes = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
-    };
+    const closePopup = () => setPopup({ message: "", type: "success", confirmAction: null });
+    const formatTime = (seconds) => `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, "0")}`;
 
     if (!quiz) return <p>Loading...</p>;
 
     if (role === "admin") {
         return (
             <div className="relative space-y-6">
-                <Popup message={popup.message} type={popup.type} onClose={closePopup} />
+                <Popup message={popup.message} type={popup.type} onClose={closePopup} confirmAction={popup.confirmAction} />
                 <h2 className="text-2xl font-bold">{quiz.title} (View Only)</h2>
                 {quiz.questions.map((q, i) => (
                     <div key={q._id || i} className="p-4 border rounded bg-white">
                         <p className="font-semibold">{i + 1}. {q.question}</p>
                         {q.options.map((opt, j) => (
-                            <p key={j} className="ml-2">
-                                {j + 1}. {opt} {q.answer === j ? "( ✔️Correct )" : ""}
-                            </p>
+                            <p key={j} className="ml-2">{j + 1}. {opt} {q.answer === j ? "( ✔️Correct )" : ""}</p>
                         ))}
                     </div>
                 ))}
-                <button
-                    onClick={() => navigate("/dashboard")}
-                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                >
+                <button onClick={() => navigate("/dashboard")} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
                     Back to Dashboard
                 </button>
             </div>
@@ -116,7 +199,7 @@ function AttemptQuiz() {
     if (!isStarted) {
         return (
             <div className="relative space-y-6">
-                <Popup message={popup.message} type={popup.type} onClose={closePopup} />
+                <Popup message={popup.message} type={popup.type} onClose={closePopup} confirmAction={popup.confirmAction} />
                 <h2 className="text-2xl font-bold">{quiz.title}</h2>
                 <div className="p-4 border rounded bg-white">
                     <h3 className="text-lg font-semibold mb-2">Instructions</h3>
@@ -124,13 +207,10 @@ function AttemptQuiz() {
                         <li>This quiz must be completed in {quiz.timer} minute{quiz.timer !== 1 ? "s" : ""}.</li>
                         <li>Total Questions: {quiz.questions.length}</li>
                         <li>Once submitted, you cannot change your answers.</li>
-                        <li>Do not reload the page during the quiz.</li>
-                        <li>Do not try to copy or minimize the screen (fullscreen mode to be added later).</li>
+                        <li>Stay in fullscreen mode and on this tab at all times.</li>
+                        <li>{MAX_VIOLATIONS} attempts allowed before auto-submission.</li>
                     </ul>
-                    <button
-                        onClick={() => setIsStarted(true)}
-                        className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-                    >
+                    <button onClick={() => setIsStarted(true)} className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
                         Start Quiz
                     </button>
                 </div>
@@ -140,7 +220,7 @@ function AttemptQuiz() {
 
     return (
         <div className="relative space-y-6">
-            <Popup message={popup.message} type={popup.type} onClose={closePopup} />
+            <Popup message={popup.message} type={popup.type} onClose={closePopup} confirmAction={popup.confirmAction} />
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold">{quiz.title}</h2>
                 <p className="text-lg font-semibold text-red-500">Time Left: {formatTime(timeLeft)}</p>
@@ -163,7 +243,7 @@ function AttemptQuiz() {
                 </div>
             ))}
             <button
-                onClick={handleSubmit}
+                onClick={() => handleSubmit(false)}
                 className={`bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 ${timeLeft === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                 disabled={timeLeft === 0}
             >

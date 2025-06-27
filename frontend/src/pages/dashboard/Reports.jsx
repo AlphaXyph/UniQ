@@ -33,7 +33,7 @@ function Reports() {
             <Popup message={popup.message} type={popup.type} onClose={closePopup} />
             <h2 className="text-xl font-bold mb-4">All Student Reports</h2>
             <ul className="space-y-2">
-                {reports.map((r) => (
+                {[...reports].reverse().map((r) => (
                     <li key={r._id} className="p-4 border rounded bg-white">
                         <strong>{r.student?.email || "Unknown Student"}</strong> took{" "}
                         <strong>{r.quiz?.title || "Deleted Quiz"}</strong> and scored{" "}

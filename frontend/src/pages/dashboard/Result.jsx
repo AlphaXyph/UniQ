@@ -33,7 +33,7 @@ function Result() {
             <Popup message={popup.message} type={popup.type} onClose={closePopup} />
             <h2 className="text-xl font-bold mb-4">Your Results</h2>
             <ul className="space-y-2">
-                {results.map((r) => (
+                {[...results].reverse().map((r) => (
                     <li key={r._id} className="p-4 border rounded bg-white">
                         <strong>{r.quiz?.title || "Deleted Quiz"}</strong> - {r.score}/{r.total}
                     </li>

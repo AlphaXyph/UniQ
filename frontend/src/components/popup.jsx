@@ -5,7 +5,7 @@ const Popup = ({ message, type, onClose, confirmAction }) => {
         if (message) {
             const timer = setTimeout(() => {
                 onClose();
-            }, 3000);
+            }, 5000);
             return () => clearTimeout(timer);
         }
     }, [message, onClose]);
@@ -25,14 +25,20 @@ const Popup = ({ message, type, onClose, confirmAction }) => {
                 >
                     ✕
                 </button>
-                <p className="text-sm font-medium pr-6">{message}</p>
+                <div className="text-sm font-medium pr-6" dangerouslySetInnerHTML={{ __html: message }} />
                 {confirmAction && (
-                    <div className="mt-2 flex justify-end">
+                    <div className="mt-2 flex justify-end gap-2">
                         <button
                             className="bg-white text-gray-800 px-3 py-1 rounded hover:bg-gray-200 text-sm"
                             onClick={confirmAction}
                         >
                             Confirm
+                        </button>
+                        <button
+                            className="bg-gray-300 text-gray-800 px-3 py-1 rounded hover:bg-gray-400 text-sm"
+                            onClick={onClose}
+                        >
+                            Cancel
                         </button>
                     </div>
                 )}

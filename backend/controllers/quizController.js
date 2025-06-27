@@ -4,7 +4,7 @@ const Result = require("../models/Result");
 const createQuiz = async (req, res) => {
     try {
         const { title, questions, timer } = req.body;
-        if (!title || !questions || questions.length === 0 || !timer || timer < 1) {
+        if (!title || !questions || questions.length === 0 || !timer || timer < 0.5) {
             return res.status(400).json({ msg: "Title, questions, and valid timer are required" });
         }
         const createdBy = req.user.id;
