@@ -6,6 +6,7 @@ import Popup from "../../components/popup";
 function CreateQuiz() {
     const [title, setTitle] = useState("");
     const [questions, setQuestions] = useState([]);
+    const [timer, setTimer] = useState(5); // Default 5 minutes
     const [popup, setPopup] = useState({ message: "", type: "success" });
     const fileInputRef = useRef(null);
 
@@ -54,6 +55,10 @@ function CreateQuiz() {
             setPopup({ message: "Title cannot be empty", type: "error" });
             return;
         }
+        if (timer < 1) {
+            setPopup({ message: "Timer must be at least 1 minute", type: "error" });
+            return;
+        }
         const validQuestions = questions.filter(
             (q) => q.question.trim() !== "" && q.options.some((opt) => opt.trim() !== "")
         );
@@ -68,12 +73,13 @@ function CreateQuiz() {
             const token = localStorage.getItem("token");
             await API.post(
                 "/quiz/create",
-                { title, questions: validQuestions },
+                { title, questions: validQuestions, timer },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             setPopup({ message: "Quiz Created!", type: "success" });
             setTitle("");
             setQuestions([]);
+            setTimer(5); // Reset to default
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
@@ -113,6 +119,14 @@ function CreateQuiz() {
                     className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                />
+                <label className="block mb-2 font-semibold">Quiz Timer (minutes)</label>
+                <input
+                    type="number"
+                    className="border p-2 w-full mb-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={timer}
+                    onChange={(e) => setTimer(Number(e.target.value))}
+                    min={1}
                 />
                 <div className="flex items-center gap-2">
                     <label className="bg-blue-500 text-white p-2 rounded cursor-pointer hover:bg-blue-600">

@@ -9,7 +9,8 @@ const questionSchema = new mongoose.Schema({
 const quizSchema = new mongoose.Schema({
     title: String,
     questions: [questionSchema],
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    timer: { type: Number, default: 5, min: 1 }, // Timer in minutes
 });
 
 module.exports = mongoose.model("Quiz", quizSchema);
