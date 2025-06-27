@@ -52,6 +52,16 @@ function Register() {
                 <button type="submit" className="w-full bg-green-500 text-white p-2 rounded">
                     Register
                 </button>
+                <div className="text-center">
+                    <p>Already have an account?</p>
+                    <button
+                        type="button"
+                        onClick={() => navigate("/")}
+                        className="text-blue-600 underline mt-2"
+                    >
+                        Login Here
+                    </button>
+                </div>
             </form>
         </div>
     );
