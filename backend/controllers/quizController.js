@@ -3,13 +3,13 @@ const Result = require("../models/Result");
 
 const createQuiz = async (req, res) => {
     try {
-        const { title, questions, timer } = req.body;
-        if (!title || !questions || questions.length === 0 || !timer || timer < 0.5) {
-            return res.status(400).json({ msg: "Title, questions, and valid timer are required" });
+        const { title, questions, timer, subject } = req.body;
+        if (!title || !questions || questions.length === 0 || !timer || timer < 0.5 || !subject) {
+            return res.status(400).json({ msg: "Title, questions, valid timer, and subject are required" });
         }
         const createdBy = req.user.id;
 
-        const newQuiz = new Quiz({ title, questions, createdBy, timer });
+        const newQuiz = new Quiz({ subject, title, questions, createdBy, timer });
         await newQuiz.save();
         res.status(201).json({ msg: "Quiz created successfully" });
     } catch (err) {
@@ -47,13 +47,13 @@ const getQuiz = async (req, res) => {
 const updateQuiz = async (req, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ msg: "Admin access required" });
     try {
-        const { title, questions, timer } = req.body;
-        if (!title || !questions || questions.length === 0 || !timer || timer < 1) {
-            return res.status(400).json({ msg: "Title, questions, and valid timer are required" });
+        const { title, questions, timer, subject } = req.body;
+        if (!title || !questions || questions.length === 0 || !timer || timer < 1 || !subject) {
+            return res.status(400).json({ msg: "Title, questions, valid timer, and subject are required" });
         }
         const quiz = await Quiz.findByIdAndUpdate(
             req.params.quizId,
-            { title, questions, timer },
+            { subject, title, questions, timer },
             { new: true }
         );
         if (!quiz) return res.status(404).json({ msg: "Quiz not found" });

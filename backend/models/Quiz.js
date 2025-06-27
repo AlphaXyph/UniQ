@@ -7,6 +7,7 @@ const questionSchema = new mongoose.Schema({
 });
 
 const quizSchema = new mongoose.Schema({
+    subject: { type: String, required: true }, // Add subject as string
     title: String,
     questions: [questionSchema],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },

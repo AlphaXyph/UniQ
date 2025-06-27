@@ -5,6 +5,7 @@ import Popup from "../../components/popup";
 function Result() {
     const [results, setResults] = useState([]);
     const [popup, setPopup] = useState({ message: "", type: "success" });
+    const [searchTerm, setSearchTerm] = useState("");
 
     useEffect(() => {
         const fetch = async () => {
@@ -56,33 +57,54 @@ function Result() {
         return new Date(b) - new Date(a);
     });
 
+    // Filter results by search term
+    const filteredResults = Object.entries(groupedResults).reduce((acc, [date, results]) => {
+        const filtered = results.filter(
+            (r) =>
+                r.quiz?.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                r.quiz?.title?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        if (filtered.length > 0) acc[date] = filtered;
+        return acc;
+    }, {});
+
     return (
-        <div className="relative">
+        <div className="relative p-4">
             <Popup message={popup.message} type={popup.type} onClose={closePopup} />
             <h2 className="text-xl font-bold mb-4">Your Results</h2>
+            <input
+                type="text"
+                placeholder="Search by subject or title"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="mb-4 p-2 border rounded w-full"
+            />
             {sortedDates.length === 0 && <p>No results found.</p>}
             {sortedDates.map((date) => (
-                <div key={date} className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">{date}</h3>
-                    <ul className="space-y-2">
-                        {groupedResults[date].map((r) => (
-                            <li key={r._id} className="p-4 border rounded bg-white flex justify-between items-center">
-                                <div>
-                                    <strong>{r.quiz?.title || "Deleted Quiz"}</strong> - {r.score}/{r.total}
-                                </div>
-                                <span className="text-sm text-gray-500">
-                                    {r.createdAt
-                                        ? new Date(r.createdAt).toLocaleTimeString("en-US", {
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                            hour12: true,
-                                        })
-                                        : "N/A"}
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+                filteredResults[date] && (
+                    <div key={date} className="mb-6">
+                        <h3 className="text-lg font-semibold text-gray-700 mb-2">{date}</h3>
+                        <ul className="space-y-2">
+                            {filteredResults[date].map((r) => (
+                                <li key={r._id} className="p-4 border rounded bg-white flex justify-between items-center">
+                                    <div>
+                                        <strong>{r.quiz?.subject || "No Subject"}</strong> -{" "}
+                                        <strong>{r.quiz?.title || "Deleted Quiz"}</strong> - {r.score}/{r.total}
+                                    </div>
+                                    <span className="text-sm text-gray-500">
+                                        {r.createdAt
+                                            ? new Date(r.createdAt).toLocaleTimeString("en-US", {
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                                hour12: true,
+                                            })
+                                            : "N/A"}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )
             ))}
         </div>
     );

@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 
-const Popup = ({ message, type, onClose, confirmAction }) => {
+const Popup = ({ message, type, onClose, confirmAction, confirmInput, setConfirmInput }) => {
     useEffect(() => {
         if (message) {
             const timer = setTimeout(() => {
@@ -27,19 +27,28 @@ const Popup = ({ message, type, onClose, confirmAction }) => {
                 </button>
                 <div className="text-sm font-medium pr-6" dangerouslySetInnerHTML={{ __html: message }} />
                 {confirmAction && (
-                    <div className="mt-2 flex justify-end gap-2">
-                        <button
-                            className="bg-white text-gray-800 px-3 py-1 rounded hover:bg-gray-200 text-sm"
-                            onClick={confirmAction}
-                        >
-                            Confirm
-                        </button>
-                        <button
-                            className="bg-gray-300 text-gray-800 px-3 py-1 rounded hover:bg-gray-400 text-sm"
-                            onClick={onClose}
-                        >
-                            Cancel
-                        </button>
+                    <div className="mt-2">
+                        <input
+                            type="text"
+                            value={confirmInput}
+                            onChange={(e) => setConfirmInput(e.target.value)}
+                            placeholder="Type YES to confirm"
+                            className="w-full border p-2 rounded text-gray-800 mb-2"
+                        />
+                        <div className="flex justify-end gap-2">
+                            <button
+                                className="bg-white text-gray-800 px-3 py-1 rounded hover:bg-gray-200 text-sm"
+                                onClick={() => confirmAction(confirmInput)}
+                            >
+                                Confirm
+                            </button>
+                            <button
+                                className="bg-gray-300 text-gray-800 px-3 py-1 rounded hover:bg-gray-400 text-sm"
+                                onClick={onClose}
+                            >
+                                Cancel
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

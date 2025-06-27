@@ -7,8 +7,14 @@ function CreateQuiz() {
     const [title, setTitle] = useState("");
     const [questions, setQuestions] = useState([]);
     const [timer, setTimer] = useState(5); // Default 5 minutes
-    const [popup, setPopup] = useState({ message: "", type: "success" });
+    const [subject, setSubject] = useState("");
+    const [subjects, setSubjects] = useState(JSON.parse(localStorage.getItem("subjects")) || ["TESTING", "UXDD", "BDAV"]);
+    const [newSubjectName, setNewSubjectName] = useState("");
+    const [showNewSubjectInput, setShowNewSubjectInput] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [popup, setPopup] = useState({ message: "", type: "success", confirmAction: null, confirmInput: "" });
     const fileInputRef = useRef(null);
+    const user = JSON.parse(localStorage.getItem("user"));
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
@@ -41,6 +47,37 @@ function CreateQuiz() {
         }
     };
 
+    const addSubject = () => {
+        if (newSubjectName && !subjects.includes(newSubjectName)) {
+            const updatedSubjects = [...subjects, newSubjectName];
+            setSubjects(updatedSubjects);
+            localStorage.setItem("subjects", JSON.stringify(updatedSubjects));
+            setSubject(newSubjectName);
+            setNewSubjectName("");
+            setShowNewSubjectInput(false);
+        }
+    };
+
+    const handleDeleteSubject = (subjectToDelete) => {
+        setIsDropdownOpen(false);
+        setPopup({
+            message: `Are you sure you want to remove "${subjectToDelete}"? Type YES to confirm.`,
+            type: "error",
+            confirmAction: (input) => {
+                if (input === "YES") {
+                    const updatedSubjects = subjects.filter((s) => s !== subjectToDelete);
+                    setSubjects(updatedSubjects);
+                    localStorage.setItem("subjects", JSON.stringify(updatedSubjects));
+                    if (subject === subjectToDelete) setSubject("");
+                    setPopup({ message: "Subject deleted", type: "success", confirmAction: null, confirmInput: "" });
+                } else {
+                    setPopup({ message: "Deletion cancelled. Please type YES to confirm.", type: "error", confirmAction: popup.confirmAction, confirmInput: "" });
+                }
+            },
+            confirmInput: "",
+        });
+    };
+
     const handleAddQuestion = () => {
         setQuestions((prev) => [...prev, { question: "", options: ["", "", "", ""], answer: 0 }]);
     };
@@ -51,6 +88,10 @@ function CreateQuiz() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (subject.trim() === "") {
+            setPopup({ message: "Subject is required", type: "error" });
+            return;
+        }
         if (title.trim() === "") {
             setPopup({ message: "Title cannot be empty", type: "error" });
             return;
@@ -73,10 +114,11 @@ function CreateQuiz() {
             const token = localStorage.getItem("token");
             await API.post(
                 "/quiz/create",
-                { title, questions: validQuestions, timer },
+                { subject, title, questions: validQuestions, timer },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             setPopup({ message: "Quiz Created!", type: "success" });
+            setSubject("");
             setTitle("");
             setQuestions([]);
             setTimer(5); // Reset to default
@@ -89,7 +131,7 @@ function CreateQuiz() {
     };
 
     const closePopup = () => {
-        setPopup({ message: "", type: "success" });
+        setPopup({ message: "", type: "success", confirmAction: null, confirmInput: "" });
     };
 
     const downloadExampleCsv = () => {
@@ -110,9 +152,90 @@ function CreateQuiz() {
 
     return (
         <div className="relative">
-            <Popup message={popup.message} type={popup.type} onClose={closePopup} />
+            <Popup
+                message={popup.message}
+                type={popup.type}
+                onClose={closePopup}
+                confirmAction={popup.confirmAction}
+                confirmInput={popup.confirmInput}
+                setConfirmInput={(value) => setPopup({ ...popup, confirmInput: value })}
+            />
             <form onSubmit={handleSubmit} className="space-y-4">
                 <h2 className="text-xl font-bold">Create Quiz</h2>
+                <div>
+                    <label className="block mb-1 font-semibold">Subject</label>
+                    <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                            <div
+                                className="w-full border p-2 rounded bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            >
+                                {subject || "Select Subject"}
+                            </div>
+                            {isDropdownOpen && (
+                                <ul className="absolute z-10 w-full bg-white border rounded mt-1 max-h-40 overflow-auto shadow-lg">
+                                    {subjects.length > 0 ? (
+                                        subjects.map((s, index) => (
+                                            <li
+                                                key={index}
+                                                className="flex items-center justify-between p-2 hover:bg-gray-100"
+                                                onClick={() => {
+                                                    setSubject(s);
+                                                    setIsDropdownOpen(false);
+                                                }}
+                                            >
+                                                <span>{s}</span>
+                                                {user.role === "admin" && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteSubject(s);
+                                                        }}
+                                                        className="text-red-500 hover:text-red-700"
+                                                        aria-label={`Remove ${s}`}
+                                                    >
+                                                        ─
+                                                    </button>
+                                                )}
+                                            </li>
+                                        ))
+                                    ) : (
+                                        <li className="p-2 text-gray-500">No subjects available</li>
+                                    )}
+                                </ul>
+                            )}
+                        </div>
+                        {user.role === "admin" && (
+                            <button
+                                type="button"
+                                onClick={() => setShowNewSubjectInput(true)}
+                                className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            >
+                                ✚
+                            </button>
+                        )}
+                    </div>
+                    {showNewSubjectInput && user.role === "admin" && (
+                        <div className="flex items-center gap-2 mt-2">
+                            <input
+                                type="text"
+                                value={newSubjectName}
+                                onChange={(e) => setNewSubjectName(e.target.value)}
+                                placeholder="New Subject Name"
+                                className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <button
+                                type="button"
+                                onClick={addSubject}
+                                className="p-2 bg-green-500 text-white rounded hover:bg-green-600"
+                                disabled={!newSubjectName}
+                            >
+                                Add
+                            </button>
+                        </div>
+                    )}
+                </div>
                 <input
                     type="text"
                     placeholder="Quiz Title"
@@ -123,7 +246,7 @@ function CreateQuiz() {
                 <label className="block mb-2 font-semibold">Quiz Timer (minutes)</label>
                 <input
                     type="number"
-                    className="border p-2 w-full mb-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={timer}
                     onChange={(e) => setTimer(Number(e.target.value))}
                     min={1}

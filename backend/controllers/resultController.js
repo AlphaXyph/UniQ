@@ -33,7 +33,7 @@ const submitQuiz = async (req, res) => {
 
 const getUserResults = async (req, res) => {
     try {
-        const results = await Result.find({ student: req.user.id }).populate("quiz", "title");
+        const results = await Result.find({ student: req.user.id }).populate("quiz", "title subject");
         const filteredResults = results.filter((r) => r.quiz);
         res.json(filteredResults);
     } catch (err) {
@@ -45,7 +45,7 @@ const getUserResults = async (req, res) => {
 const getAllResults = async (req, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ msg: "Admin access required" });
     try {
-        const results = await Result.find().populate("student", "email").populate("quiz", "title");
+        const results = await Result.find().populate("student", "email").populate("quiz", "title subject");
         const filteredResults = results.filter((r) => r.quiz);
         res.json(filteredResults);
     } catch (err) {
