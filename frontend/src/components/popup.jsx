@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 
-const Popup = ({ message, type, onClose }) => {
+const Popup = ({ message, type, onClose, confirmAction }) => {
     useEffect(() => {
         if (message) {
             const timer = setTimeout(() => {
@@ -26,6 +26,16 @@ const Popup = ({ message, type, onClose }) => {
                     ✕
                 </button>
                 <p className="text-sm font-medium pr-6">{message}</p>
+                {confirmAction && (
+                    <div className="mt-2 flex justify-end">
+                        <button
+                            className="bg-white text-gray-800 px-3 py-1 rounded hover:bg-gray-200 text-sm"
+                            onClick={confirmAction}
+                        >
+                            Confirm
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

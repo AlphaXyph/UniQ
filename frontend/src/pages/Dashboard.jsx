@@ -5,6 +5,7 @@ import Reports from "./dashboard/Reports";
 import Result from "./dashboard/Result";
 import CreateQuiz from "./dashboard/createQuiz";
 import AttemptQuiz from "./dashboard/AttemptQuiz";
+import EditQuiz from "./dashboard/EditQuiz";
 
 function Dashboard() {
     const navigate = useNavigate();
@@ -131,6 +132,7 @@ function Dashboard() {
                         />
                         <Route path="result" element={<Result />} />
                         <Route path="reports" element={<Reports />} />
+                        <Route path="edit/:quizId" element={<EditQuiz />} />
                         <Route path="attempt/:quizId" element={<AttemptQuiz />} />
                     </Routes>
                 </div>
