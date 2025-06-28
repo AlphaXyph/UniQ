@@ -82,9 +82,9 @@ function Home() {
                     <li key={q._id} className="p-4 border rounded bg-white relative">
                         <div className="flex justify-between items-center">
                             <div>
-                                <strong className="text-lg">{q.title}</strong>
+                                <strong className="text-lg">{q.subject} - {q.title}</strong>
                                 <p className="text-sm text-blue-500">Posted by: {q.createdBy?.email || "Unknown"}</p>
-                                <p className="text-sm text-gray-600">Total Questions: {q.questions.length}</p>
+                                <p className="text-sm text-gray-600">Total Questions: {q.questions.length} | Total Time: {q.timer} minutes</p>
                                 {role === "user" ? (
                                     <Link to={`/dashboard/attempt/${q._id}`} className="text-blue-600 underline">
                                         Attempt Quiz

@@ -6,6 +6,7 @@ import Popup from "../../components/popup";
 function AttemptQuiz({ setIsQuizActive }) {
     const { quizId } = useParams();
     const [quiz, setQuiz] = useState(null);
+    const [originalIndices, setOriginalIndices] = useState([]); // Track original indices
     const [answers, setAnswers] = useState([]);
     const [popup, setPopup] = useState({ message: "", type: "success", confirmAction: null });
     const [isStarted, setIsStarted] = useState(false);
@@ -14,7 +15,19 @@ function AttemptQuiz({ setIsQuizActive }) {
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem("user"));
     const role = user?.role || "user";
-    const MAX_VIOLATIONS = 3; // Reduced to make it stricter
+    const MAX_VIOLATIONS = 3;
+
+    // Fisher-Yates shuffle with index mapping
+    const shuffleArray = (array) => {
+        const shuffled = [...array];
+        const indices = array.map((_, index) => index);
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        return { shuffled, indices };
+    };
 
     useEffect(() => {
         const fetchQuiz = async () => {
@@ -23,10 +36,14 @@ function AttemptQuiz({ setIsQuizActive }) {
                 const res = await API.get(`/quiz/${quizId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                setQuiz(res.data);
                 if (role === "user") {
-                    setAnswers(new Array(res.data.questions.length).fill(null));
+                    const { shuffled, indices } = shuffleArray(res.data.questions);
+                    setQuiz({ ...res.data, questions: shuffled });
+                    setOriginalIndices(indices);
+                    setAnswers(new Array(shuffled.length).fill(null));
                     setTimeLeft(res.data.timer * 60);
+                } else {
+                    setQuiz(res.data);
                 }
             } catch (err) {
                 setPopup({ message: err.response?.data?.msg || "Error loading quiz", type: "error", confirmAction: null });
@@ -51,9 +68,11 @@ function AttemptQuiz({ setIsQuizActive }) {
 
             try {
                 const token = localStorage.getItem("token");
+                // Reorder answers to match original question order
+                const orderedAnswers = role === "user" ? answers.map((_, i) => answers[originalIndices.indexOf(i)]) : answers;
                 await API.post(
                     "/result/submit",
-                    { quizId, answers },
+                    { quizId, answers: orderedAnswers },
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 setPopup({ message: "Your test was submitted successfully", type: "success", confirmAction: null });
@@ -64,7 +83,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                 setPopup({ message: err.response?.data?.msg || "Submission failed", type: "error", confirmAction: null });
             }
         },
-        [quizId, answers, navigate, setIsQuizActive]
+        [quizId, answers, navigate, setIsQuizActive, originalIndices, role]
     );
 
     const enforceFullscreen = useCallback(() => {
@@ -133,7 +152,7 @@ function AttemptQuiz({ setIsQuizActive }) {
             window.addEventListener("focus", handleFocus);
             document.addEventListener("keydown", handleKeyDown);
 
-            const interval = setInterval(enforceFullscreen, 100); // Check every 100ms
+            const interval = setInterval(enforceFullscreen, 100);
 
             return () => {
                 document.removeEventListener("fullscreenchange", fullscreenChange);
@@ -180,7 +199,8 @@ function AttemptQuiz({ setIsQuizActive }) {
         return (
             <div className="relative space-y-6">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} confirmAction={popup.confirmAction} />
-                <h2 className="text-2xl font-bold">{quiz.title} (View Only)</h2>
+                <h2 className="text-2xl font-bold">{quiz.title}</h2>
+                <p className="text-lg">Subject: {quiz.subject}</p>
                 {quiz.questions.map((q, i) => (
                     <div key={q._id || i} className="p-4 border rounded bg-white">
                         <p className="font-semibold">{i + 1}. {q.question}</p>
@@ -201,6 +221,7 @@ function AttemptQuiz({ setIsQuizActive }) {
             <div className="relative space-y-6">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} confirmAction={popup.confirmAction} />
                 <h2 className="text-2xl font-bold">{quiz.title}</h2>
+                <p className="text-lg">Subject: {quiz.subject}</p>
                 <div className="p-4 border rounded bg-white">
                     <h3 className="text-lg font-semibold mb-2">Instructions</h3>
                     <ul className="list-disc pl-5 space-y-2">
