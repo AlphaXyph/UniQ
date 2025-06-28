@@ -2,13 +2,13 @@ import React, { useEffect } from "react";
 
 const Popup = ({ message, type, onClose, confirmAction, confirmInput, setConfirmInput }) => {
     useEffect(() => {
-        if (message) {
+        if (message && !confirmAction) {
             const timer = setTimeout(() => {
                 onClose();
             }, 5000);
             return () => clearTimeout(timer);
         }
-    }, [message, onClose]);
+    }, [message, onClose, confirmAction]);
 
     if (!message) return null;
 

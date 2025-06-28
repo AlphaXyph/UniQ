@@ -1,18 +1,20 @@
 import React, { useState, useRef } from "react";
 import API from "../../../api";
 import Papa from "papaparse";
-import Popup from "../../components/popup";
+import Popup from "../../components/Popup";
+import AIChatbot from "../../components/AiChatbot";
 
 function CreateQuiz() {
     const [title, setTitle] = useState("");
     const [questions, setQuestions] = useState([]);
-    const [timer, setTimer] = useState(5); // Default 5 minutes
+    const [timer, setTimer] = useState(5);
     const [subject, setSubject] = useState("");
     const [subjects, setSubjects] = useState(JSON.parse(localStorage.getItem("subjects")) || ["TESTING", "UXDD", "BDAV"]);
     const [newSubjectName, setNewSubjectName] = useState("");
     const [showNewSubjectInput, setShowNewSubjectInput] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success", confirmAction: null, confirmInput: "" });
+    const [isChatbotOpen, setIsChatbotOpen] = useState(false);
     const fileInputRef = useRef(null);
     const user = JSON.parse(localStorage.getItem("user"));
 
@@ -114,20 +116,32 @@ function CreateQuiz() {
             const token = localStorage.getItem("token");
             await API.post(
                 "/quiz/create",
-                { subject, title, questions: validQuestions, timer },
+                { subject, title, questions: validQuestions, timer, isVisible: false },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            setPopup({ message: "Quiz Created!", type: "success" });
+            setPopup({ message: "Quiz Created! It is hidden by default. Go to Home to make it visible.", type: "success" });
             setSubject("");
             setTitle("");
             setQuestions([]);
-            setTimer(5); // Reset to default
+            setTimer(5);
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
         } catch (err) {
             setPopup({ message: err.response?.data?.msg || "Failed to create quiz", type: "error" });
         }
+    };
+
+    const importGeneratedQuestions = (generatedQuestions) => {
+        const formattedQuestions = generatedQuestions.map((q) => ({
+            question: q.question,
+            options: [q.optionA, q.optionB, q.optionC, q.optionD],
+            answer: parseInt(q.correct, 10) - 1,
+        }));
+        setQuestions((prev) => [...prev, ...formattedQuestions]);
+        setSubject(generatedQuestions[0]?.subject || subject);
+        setIsChatbotOpen(false);
+        setPopup({ message: "Questions imported to form!", type: "success" });
     };
 
     const closePopup = () => {
@@ -335,6 +349,14 @@ function CreateQuiz() {
                     </button>
                 </div>
             </form>
+            <button
+                onClick={() => setIsChatbotOpen(!isChatbotOpen)}
+                className="fixed bottom-4 right-4 bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 z-50"
+                title="AI Quiz Generator"
+            >
+                🤖
+            </button>
+            {isChatbotOpen && <AIChatbot onClose={() => setIsChatbotOpen(false)} importQuestions={importGeneratedQuestions} />}
         </div>
     );
 }

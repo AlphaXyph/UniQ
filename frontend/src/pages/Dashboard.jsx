@@ -6,7 +6,7 @@ import Result from "./dashboard/Result";
 import CreateQuiz from "./dashboard/createQuiz";
 import AttemptQuiz from "./dashboard/AttemptQuiz";
 import EditQuiz from "./dashboard/EditQuiz";
-import Popup from "../components/popup";
+import Popup from "../components/Popup";
 
 function Dashboard() {
     const navigate = useNavigate();

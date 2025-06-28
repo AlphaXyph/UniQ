@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import API from "../../../api";
 import { Link, useNavigate } from "react-router-dom";
-import Popup from "../../components/popup";
+import Popup from "../../components/Popup";
 
 function Home() {
     const [quizzes, setQuizzes] = useState([]);

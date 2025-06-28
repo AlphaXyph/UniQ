@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api";
-import Popup from "../components/popup";
+import Popup from "../components/Popup";
 
 function Register() {
     const [email, setEmail] = useState("");
@@ -10,8 +10,40 @@ function Register() {
     const [popup, setPopup] = useState({ message: "", type: "success" });
     const navigate = useNavigate();
 
+    // Email validation: non-empty, valid format, and ends with @ves.ac.in
+    const validateEmail = (email) => {
+        if (!email) return "Email is required";
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) return "Invalid email format";
+        if (!email.endsWith("@ves.ac.in")) return "Email must end with @ves.ac.in";
+        return "";
+    };
+
+    // Password validation: non-empty, 8+ chars, uppercase, lowercase, number, special char
+    const validatePassword = (password) => {
+        if (!password) return "Password is required";
+        if (password.length < 8) return "Password must be at least 8 characters long";
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        if (!passwordRegex.test(password)) {
+            return "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character";
+        }
+        return "";
+    };
+
     const handleRegister = async (e) => {
         e.preventDefault();
+        const emailError = validateEmail(email);
+        const passwordError = validatePassword(password);
+        const roleError = !["user", "admin"].includes(role) ? "Role must be Student or Teacher" : "";
+
+        if (emailError || passwordError || roleError) {
+            setPopup({
+                message: [emailError, passwordError, roleError].filter(Boolean).join("<br />"),
+                type: "error",
+            });
+            return;
+        }
+
         try {
             await API.post("/auth/register", { email, password, role });
             setPopup({ message: "Registered! Please login.", type: "success" });
@@ -41,14 +73,14 @@ function Register() {
                 </select>
                 <input
                     type="email"
-                    placeholder="Email"
+                    placeholder="Email (must end with @ves.ac.in)"
                     className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                 />
                 <input
                     type="password"
-                    placeholder="Password"
+                    placeholder="Password (8+ chars, mixed case, number, special char)"
                     className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api";
-import Popup from "../components/popup";
+import Popup from "../components/Popup";
 
 function Login() {
     const [email, setEmail] = useState("");
@@ -9,8 +9,34 @@ function Login() {
     const [popup, setPopup] = useState({ message: "", type: "success" });
     const navigate = useNavigate();
 
+    // Email validation: non-empty, valid format, and ends with @ves.ac.in
+    const validateEmail = (email) => {
+        if (!email) return "Email is required";
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) return "Invalid email format";
+        if (!email.endsWith("@ves.ac.in")) return "Email must end with @ves.ac.in";
+        return "";
+    };
+
+    // Password validation: non-empty
+    const validatePassword = (password) => {
+        if (!password) return "Password is required";
+        return "";
+    };
+
     const handleLogin = async (e) => {
         e.preventDefault();
+        const emailError = validateEmail(email);
+        const passwordError = validatePassword(password);
+
+        if (emailError || passwordError) {
+            setPopup({
+                message: [emailError, passwordError].filter(Boolean).join("<br />"),
+                type: "error",
+            });
+            return;
+        }
+
         try {
             const res = await API.post("/auth/login", { email, password });
             const { token, user } = res.data;
@@ -35,7 +61,7 @@ function Login() {
                 <h2 className="text-2xl font-bold text-center">UniQ Login</h2>
                 <input
                     type="email"
-                    placeholder="Email"
+                    placeholder="Email (must end with @ves.ac.in)"
                     className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}

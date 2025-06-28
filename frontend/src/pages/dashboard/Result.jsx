@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import API from "../../../api";
-import Popup from "../../components/popup";
+import Popup from "../../components/Popup";
 
 function Result() {
     const [results, setResults] = useState([]);
