@@ -57,6 +57,24 @@ function Home() {
         setDeleteConfirm({ show: false, quizId: null });
     };
 
+    const handleToggleVisibility = async (quizId, isVisible) => {
+        try {
+            const token = localStorage.getItem("token");
+            console.log(`Toggling visibility for quiz: ${quizId} to ${!isVisible}`);
+            const response = await API.post(
+                `/quiz/toggle-visibility/${quizId}`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            console.log("Toggle visibility response:", response.data);
+            setPopup({ message: response.data.msg || `Quiz is now ${isVisible ? "hidden" : "visible"}`, type: "success" });
+            fetchQuizzes();
+        } catch (err) {
+            console.error("Toggle visibility error:", err.response?.data || err.message);
+            setPopup({ message: err.response?.data?.msg || "Failed to toggle visibility. Please try again.", type: "error" });
+        }
+    };
+
     const closePopup = () => {
         setPopup({ message: "", type: "success" });
     };
@@ -84,16 +102,21 @@ function Home() {
                             <div>
                                 <strong className="text-lg">{q.subject} - {q.title}</strong>
                                 <p className="text-sm text-blue-500">Posted by: {q.createdBy?.email || "Unknown"}</p>
-                                <p className="text-sm text-gray-600">Total Questions: {q.questions.length} | Total Time: {q.timer} minutes</p>
-                                {role === "user" ? (
+                                <p className="text-sm text-gray-600">
+                                    Total Questions: {q.questions.length} | Total Time: {q.timer} minutes
+                                    {role === "admin" && (
+                                        <span> | Status: {q.isVisible ? "Visible" : "Hidden"}</span>
+                                    )}
+                                </p>
+                                {role === "user" && q.isVisible ? (
                                     <Link to={`/dashboard/attempt/${q._id}`} className="text-blue-600 underline">
                                         Attempt Quiz
                                     </Link>
-                                ) : (
+                                ) : role === "admin" ? (
                                     <Link to={`/dashboard/attempt/${q._id}`} className="text-blue-600 underline">
                                         View Quiz
                                     </Link>
-                                )}
+                                ) : null}
                             </div>
                             {role === "admin" && (
                                 <div className="flex gap-2">
@@ -110,6 +133,13 @@ function Home() {
                                         title="Delete Quiz"
                                     >
                                         ❌
+                                    </button>
+                                    <button
+                                        onClick={() => handleToggleVisibility(q._id, q.isVisible)}
+                                        className={`text-${q.isVisible ? "gray" : "green"}-500 hover:text-${q.isVisible ? "gray" : "green"}-700`}
+                                        title={q.isVisible ? "Hide Quiz" : "Show Quiz"}
+                                    >
+                                        {q.isVisible ? <i className="fas fa-eye"></i> : <i className="fas fa-eye-slash"></i>}
                                     </button>
                                 </div>
                             )}
