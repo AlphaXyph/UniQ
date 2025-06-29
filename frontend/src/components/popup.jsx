@@ -13,13 +13,16 @@ const Popup = ({ message, type, onClose, confirmAction, confirmInput, setConfirm
     if (!message) return null;
 
     return (
+
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md">
             <div
-                className={`relative p-4 rounded-lg shadow-xl border border-opacity-20 ${type === "success" ? "bg-green-500 text-white border-green-600" : "bg-red-500 text-white border-red-600"
-                    } opacity-95 transition-all duration-300`}
+                className={`relative p-4 rounded-lg shadow-xl shadow-gray-400 border-1 ${type === "success"
+                    ? "bg-green-500 text-black border-gray-700"
+                    : "bg-red-400 text-black border-gray-700"
+                    } transition-all duration-300`}
             >
                 <button
-                    className="absolute top-1 right-1 text-white hover:text-gray-200 text-lg font-bold"
+                    className="absolute top-2 right-2 text-white hover:text-gray-100 text-xl font-bold"
                     onClick={onClose}
                     aria-label="Close popup"
                 >

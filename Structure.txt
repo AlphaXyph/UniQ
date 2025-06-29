@@ -1,0 +1,53 @@
+UniQuiz/
+├── frontend/                # Frontend application (React)
+│   ├── src/
+│   │   ├── components/      # Reusable UI components
+│   │   │   ├── Popup.jsx    # Popup component for notifications
+│   │   │   └── AiChatbot.jsx # An Ai using gemini API Key to generate questions
+│   │   │
+│   │   ├── pages/
+│   │   │   ├── dashboard/       # Dashboard-related components and pages
+│   │   │   │   ├── Home.jsx     # Home page component
+│   │   │   │   ├── Reports.jsx  # Reports page component
+│   │   │   │   ├── Result.jsx   # Result page component
+│   │   │   │   ├── CreateQuiz.jsx # Create Quiz page component
+│   │   │   │   ├── Profile.jsx  # Profile page component
+│   │   │   │   ├── AttemptQuiz.jsx # Attempt Quiz page component
+│   │   │   │   └── EditQuiz.jsx # Edit Quiz page component
+│   │   │   ├── Login.jsx
+│   │   │   ├── Register.jsx
+│   │   │   └── Dahboard.jsx
+│   │   ├── api.js           # API service files
+│   │   ├── App.jsx          # Main App component with routing
+│   │   ├── index.html       # HTML file with <link> for icons (e.g., Font Awesome CDN)
+│   ├── package.json         # Frontend dependencies and scripts
+│   └── .gitignore           # Frontend Git ignore file
+│
+├── backend/                 # Backend application (e.g., Node.js/Express)
+│   ├── models/              # Database models
+│   │   ├── Quiz.js          # Quiz model
+│   │   ├── User.js          # User model
+│   │   └── Result.js        # Result model
+│   │
+│   ├── controllers/         # Business logic controllers
+│   │   ├── quizController.js # Quiz-related controller
+│   │   ├── authController.js # Authentication controller
+│   │   └── resultController.js # Result-related controller
+│   │
+│   ├── routes/              # API routes
+│   │   ├── authRoutes.js    # Authentication routes
+│   │   ├── resultRoutes.js  # Result routes
+│   │   └── quizRoutes.js    # Quiz routes
+│   │
+│   ├── middleware/          # Middleware (e.g., authentication, error handling)
+│   │   └── authMiddleware.js          # Authentication middleware
+│   │
+│   ├── config/              # Configuration files
+│   │   └── db.js            # Database configuration
+│   │   
+│   ├── .env
+│   ├── server.js            # Entry point for the backend server
+│   └── package.json         # Backend dependencies and scripts
+│
+├── .gitignore               # Root Git ignore file
+└── README.md                # Project documentation

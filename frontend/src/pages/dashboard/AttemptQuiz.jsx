@@ -199,7 +199,7 @@ function AttemptQuiz({ setIsQuizActive }) {
         return (
             <div className="relative space-y-6">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} confirmAction={popup.confirmAction} />
-                <h2 className="text-2xl font-bold">{quiz.title}</h2>
+                <h2 className="text-2xl font-bold">{quiz.subject} - {quiz.title}</h2>
                 <p className="text-lg">Subject: {quiz.subject}</p>
                 {quiz.questions.map((q, i) => (
                     <div key={q._id || i} className="p-4 border rounded bg-white">
@@ -243,7 +243,7 @@ function AttemptQuiz({ setIsQuizActive }) {
         <div className="relative space-y-6">
             <Popup message={popup.message} type={popup.type} onClose={closePopup} confirmAction={popup.confirmAction} />
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold">{quiz.title}</h2>
+                <h2 className="text-2xl font-bold">{quiz.subject} - {quiz.title}</h2>
                 <p className="text-lg font-semibold text-red-500">Time Left: {formatTime(timeLeft)}</p>
             </div>
             {quiz.questions.map((q, i) => (

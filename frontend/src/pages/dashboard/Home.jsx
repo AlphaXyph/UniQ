@@ -121,6 +121,13 @@ function Home() {
                             {role === "admin" && (
                                 <div className="flex gap-2">
                                     <button
+                                        onClick={() => handleToggleVisibility(q._id, q.isVisible)}
+                                        className={`text-${q.isVisible ? "gray" : "green"}-500 mx-1 hover:text-${q.isVisible ? "gray" : "green"}-700`}
+                                        title={q.isVisible ? "Hide Quiz" : "Show Quiz"}
+                                    >
+                                        {q.isVisible ? <i className="fas fa-eye"></i> : <i className="fas fa-eye-slash"></i>}
+                                    </button>
+                                    <button
                                         onClick={() => handleEdit(q._id)}
                                         className="text-blue-500 hover:text-blue-700"
                                         title="Edit Quiz"
@@ -133,13 +140,6 @@ function Home() {
                                         title="Delete Quiz"
                                     >
                                         ❌
-                                    </button>
-                                    <button
-                                        onClick={() => handleToggleVisibility(q._id, q.isVisible)}
-                                        className={`text-${q.isVisible ? "gray" : "green"}-500 hover:text-${q.isVisible ? "gray" : "green"}-700`}
-                                        title={q.isVisible ? "Hide Quiz" : "Show Quiz"}
-                                    >
-                                        {q.isVisible ? <i className="fas fa-eye"></i> : <i className="fas fa-eye-slash"></i>}
                                     </button>
                                 </div>
                             )}
