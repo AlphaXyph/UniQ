@@ -13,10 +13,26 @@ function Register() {
     const [branch, setBranch] = useState("");
     const [division, setDivision] = useState("");
     const [rollNo, setRollNo] = useState("");
-    const [year, setYear] = useState("FY");
+    const [year, setYear] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success" });
     const navigate = useNavigate();
+
+    const formatName = (value) => {
+        if (!value) return value;
+        const trimmed = value.trim();
+        return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+    };
+
+    const formatBranch = (value) => {
+        if (!value) return value;
+        return value.trim().toUpperCase();
+    };
+
+    const formatDivision = (value) => {
+        if (!value) return value;
+        return value.trim().toUpperCase();
+    };
 
     const validateEmail = (email) => {
         const lowerCaseEmail = email.toLowerCase().trim();
@@ -24,7 +40,6 @@ function Register() {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(lowerCaseEmail)) return "Invalid email format";
         if (!lowerCaseEmail.endsWith("@ves.ac.in")) return "Email must end with @ves.ac.in";
-        setEmail(lowerCaseEmail);
         return "";
     };
 
@@ -36,7 +51,6 @@ function Register() {
         if (!passwordRegex.test(trimmedPassword)) {
             return "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character";
         }
-        setPassword(trimmedPassword);
         return "";
     };
 
@@ -44,7 +58,6 @@ function Register() {
         const trimmedConfirmPassword = confirmPassword.trim();
         if (!trimmedConfirmPassword) return "Confirm Password is required";
         if (trimmedConfirmPassword !== password) return "Passwords do not match";
-        setConfirmPassword(trimmedConfirmPassword);
         return "";
     };
 
@@ -52,7 +65,6 @@ function Register() {
         const trimmedName = name.trim();
         if (!trimmedName) return "Name is required";
         if (trimmedName.length > 20) return "Name must be 20 characters or less";
-        setName(trimmedName);
         return "";
     };
 
@@ -60,23 +72,20 @@ function Register() {
         const trimmedSurname = surname.trim();
         if (!trimmedSurname) return "Surname is required";
         if (trimmedSurname.length > 20) return "Surname must be 20 characters or less";
-        setSurname(trimmedSurname);
         return "";
     };
 
     const validateBranch = (branch) => {
         const trimmedBranch = branch.trim();
         if (role === "user" && !trimmedBranch) return "Branch is required";
-        if (role === "user" && trimmedBranch.length > 15) return "Branch must be 15 characters or less";
-        setBranch(trimmedBranch);
+        if (role === "user" && trimmedBranch.length > 4) return "Branch must be 4 characters or less";
         return "";
     };
 
     const validateDivision = (division) => {
         const trimmedDivision = division.trim();
         if (role === "user" && !trimmedDivision) return "Division is required";
-        if (role === "user" && trimmedDivision.length > 1) return "Division must be 1 character";
-        setDivision(trimmedDivision);
+        if (role === "user" && trimmedDivision.length > 2) return "Division must be 2 characters or less";
         return "";
     };
 
@@ -84,7 +93,6 @@ function Register() {
         const trimmedRollNo = rollNo.trim();
         if (role === "user" && !trimmedRollNo) return "Roll No is required";
         if (role === "user" && (!/^\d{1,3}$/.test(trimmedRollNo) || parseInt(trimmedRollNo) > 999)) return "Roll No must be a 3-digit number or less";
-        setRollNo(trimmedRollNo);
         return "";
     };
 
@@ -113,8 +121,22 @@ function Register() {
             return;
         }
 
+        const formattedData = {
+            email: email.toLowerCase().trim(),
+            password: password.trim(),
+            role,
+            name: formatName(name),
+            surname: formatName(surname),
+            ...(role === "user" && {
+                branch: formatBranch(branch),
+                division: formatDivision(division),
+                rollNo: rollNo.trim(),
+                year,
+            }),
+        };
+
         try {
-            await API.post("/auth/register", { email, password, role, name, surname, ...(role === "user" && { branch, division, rollNo, year }) });
+            await API.post("/auth/register", formattedData);
             setPopup({ message: "Registered! Please login.", type: "success" });
             setTimeout(() => navigate("/"), 2000);
         } catch (err) {
@@ -194,14 +216,14 @@ function Register() {
                             <>
                                 <input
                                     type="text"
-                                    placeholder="Branch (max 15 chars)"
+                                    placeholder="Branch (max 4 chars)"
                                     className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     value={branch}
                                     onChange={(e) => setBranch(e.target.value)}
                                 />
                                 <input
                                     type="text"
-                                    placeholder="Division (1 char)"
+                                    placeholder="Division (max 2 chars)"
                                     className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     value={division}
                                     onChange={(e) => setDivision(e.target.value)}
@@ -218,6 +240,7 @@ function Register() {
                                     onChange={(e) => setYear(e.target.value)}
                                     className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
+                                    <option value="">Select Year</option>
                                     <option value="FY">FY</option>
                                     <option value="SY">SY</option>
                                     <option value="TY">TY</option>

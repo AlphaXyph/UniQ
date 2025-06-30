@@ -7,7 +7,7 @@ function Profile() {
     const [user, setUser] = useState(null);
     const [editedUser, setEditedUser] = useState({});
     const [isEditing, setIsEditing] = useState(false);
-    const [currentPassword, setCurrentPassword] = useState(""); // Ensure it's empty by default
+    const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmNewPassword, setConfirmNewPassword] = useState("");
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -16,7 +16,7 @@ function Profile() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        setCurrentPassword(""); // Reset on mount
+        setCurrentPassword("");
         const fetchProfile = async () => {
             try {
                 const token = localStorage.getItem("token");
@@ -38,6 +38,63 @@ function Profile() {
         fetchProfile();
     }, [navigate]);
 
+    const formatName = (value) => {
+        if (!value) return value;
+        const trimmed = value.trim();
+        return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+    };
+
+    const formatBranch = (value) => {
+        if (!value) return value;
+        return value.trim().toUpperCase();
+    };
+
+    const formatDivision = (value) => {
+        if (!value) return value;
+        return value.trim().toUpperCase();
+    };
+
+    const validateName = (name) => {
+        const trimmedName = name.trim();
+        if (!trimmedName) return "Name is required";
+        if (trimmedName.length > 20) return "Name must be 20 characters or less";
+        return "";
+    };
+
+    const validateSurname = (surname) => {
+        const trimmedSurname = surname.trim();
+        if (!trimmedSurname) return "Surname is required";
+        if (trimmedSurname.length > 20) return "Surname must be 20 characters or less";
+        return "";
+    };
+
+    const validateBranch = (branch) => {
+        const trimmedBranch = branch.trim();
+        if (!trimmedBranch) return "Branch is required";
+        if (trimmedBranch.length > 4) return "Branch must be 4 characters or less";
+        return "";
+    };
+
+    const validateDivision = (division) => {
+        const trimmedDivision = division.trim();
+        if (!trimmedDivision) return "Division is required";
+        if (trimmedDivision.length > 2) return "Division must be 2 characters or less";
+        return "";
+    };
+
+    const validateRollNo = (rollNo) => {
+        const trimmedRollNo = rollNo.toString().trim();
+        if (!trimmedRollNo) return "Roll No is required";
+        if (!/^\d{1,3}$/.test(trimmedRollNo) || parseInt(trimmedRollNo) > 999) return "Roll No must be a 3-digit number or less";
+        return "";
+    };
+
+    const validateYear = (year) => {
+        if (!year) return "Year is required";
+        if (!["FY", "SY", "TY", "FOURTH"].includes(year)) return "Invalid year";
+        return "";
+    };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setEditedUser((prev) => ({ ...prev, [name]: value }));
@@ -48,16 +105,48 @@ function Profile() {
     };
 
     const handleSave = async () => {
+        const nameError = validateName(editedUser.name);
+        const surnameError = validateSurname(editedUser.surname);
+        const errors = [nameError, surnameError];
+
+        if (user.role === "user") {
+            const branchError = validateBranch(editedUser.branch || "");
+            const divisionError = validateDivision(editedUser.division || "");
+            const rollNoError = validateRollNo(editedUser.rollNo || "");
+            const yearError = validateYear(editedUser.year || "");
+            errors.push(branchError, divisionError, rollNoError, yearError);
+        }
+
+        const filteredErrors = errors.filter(Boolean);
+        if (filteredErrors.length) {
+            setPopup({ message: filteredErrors.join("<br />"), type: "error" });
+            return;
+        }
+
+        const formattedData = {
+            ...editedUser,
+            name: formatName(editedUser.name),
+            surname: formatName(editedUser.surname),
+            ...(user.role === "user" && {
+                branch: formatBranch(editedUser.branch),
+                division: formatDivision(editedUser.division),
+                rollNo: editedUser.rollNo?.toString().trim(),
+                year: editedUser.year,
+            }),
+        };
+
         try {
             const token = localStorage.getItem("token");
-            await API.put("/auth/profile", editedUser, {
+            await API.put("/auth/profile", formattedData, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            setUser(editedUser);
+            setUser(formattedData);
+            setEditedUser(formattedData);
             setPopup({ message: "Profile updated successfully!", type: "success" });
-            localStorage.setItem("user", JSON.stringify(editedUser));
+            localStorage.setItem("user", JSON.stringify(formattedData));
             setIsEditing(false);
         } catch (err) {
+            console.error("Profile update error:", err.response?.data || err.message);
             setPopup({ message: err.response?.data?.msg || "Update failed", type: "error" });
         }
     };
@@ -94,11 +183,10 @@ function Profile() {
     const fullName = `${user.name || ""} ${user.surname || ""}`.trim();
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center  justify-center p-4">
+        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
             <Popup message={popup.message} type={popup.type} onClose={closePopup} />
             <div className="w-full max-w-4xl bg-white shadow-md rounded-lg overflow-hidden">
                 <div className="p-6">
-                    {/* Profile Section */}
                     <div className="mb-6">
                         <h2 className="text-2xl font-bold text-center mb-6">Profile</h2>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
@@ -152,7 +240,7 @@ function Profile() {
                                             name="branch"
                                             value={editedUser.branch || ""}
                                             onChange={handleChange}
-                                            maxLength={15}
+                                            maxLength={4}
                                             readOnly={!isEditing}
                                             className={`w-full p-2 border rounded focus:outline-none ${!isEditing ? "bg-gray-100" : "focus:ring-2 focus:ring-blue-500"}`}
                                         />
@@ -164,7 +252,7 @@ function Profile() {
                                             name="division"
                                             value={editedUser.division || ""}
                                             onChange={handleChange}
-                                            maxLength={1}
+                                            maxLength={2}
                                             readOnly={!isEditing}
                                             className={`w-full p-2 border rounded focus:outline-none ${!isEditing ? "bg-gray-100" : "focus:ring-2 focus:ring-blue-500"}`}
                                         />
@@ -190,6 +278,7 @@ function Profile() {
                                             disabled={!isEditing}
                                             className={`w-full p-2 border rounded focus:outline-none ${!isEditing ? "bg-gray-100" : "focus:ring-2 focus:ring-blue-500"}`}
                                         >
+                                            <option value="">Select Year</option>
                                             <option value="FY">FY</option>
                                             <option value="SY">SY</option>
                                             <option value="TY">TY</option>
@@ -218,7 +307,6 @@ function Profile() {
             </div>
             <div className="w-full max-w-4xl mt-6 bg-white shadow-md rounded-lg overflow-hidden">
                 <div className="p-6">
-                    {/* Change Password Section */}
                     <div>
                         <h3 className="text-xl font-semibold mb-4 text-center">Change Password</h3>
                         <div className="flex flex-col items-center space-y-4">
