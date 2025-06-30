@@ -13,6 +13,6 @@ const quizSchema = new mongoose.Schema({
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     timer: { type: Number, default: 5, min: 1 }, // Timer in minutes
     isVisible: { type: Boolean, default: false }, // New field for visibility
-});
+}, { timestamps: true }); // Add timestamps for createdAt and updatedAt
 
 module.exports = mongoose.model("Quiz", quizSchema);

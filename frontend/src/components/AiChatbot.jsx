@@ -165,7 +165,7 @@ Do you have an API key, or need help with generating one?
             setStep("numQuestions");
         } else if (step === "numQuestions") {
             setNumQuestions(currentInput);
-            addAIMessage("What is the difficulty level? (Beginner: B or E, Intermediate: I or M, Advanced: A or H)");
+            addAIMessage("What is the difficulty level? \nBeginner / Easy: B or E \nIntermediate / Medium: I or M \nAdvanced / Hard: A or H");
             setStep("difficulty");
         } else if (step === "difficulty") {
             setDifficulty(currentInput);
@@ -290,8 +290,8 @@ Example:
                         >
                             <div
                                 className={`max-w-[80%] p-3 rounded-lg ${msg.sender === "user"
-                                        ? "bg-blue-600 text-white"
-                                        : "bg-gray-200 text-gray-800"
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-gray-200 text-gray-800"
                                     }`}
                             >
                                 {msg.text}

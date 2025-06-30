@@ -7,6 +7,7 @@ import CreateQuiz from "./dashboard/createQuiz";
 import Profile from "./dashboard/Profile";
 import AttemptQuiz from "./dashboard/AttemptQuiz";
 import EditQuiz from "./dashboard/EditQuiz";
+import QuizReport from "./dashboard/QuizReport";
 import Popup from "../components/Popup";
 
 function Dashboard() {
@@ -17,7 +18,7 @@ function Dashboard() {
     const user = JSON.parse(localStorage.getItem("user")) || {};
     const role = user?.role || "user";
     const name = user?.name || "User";
-    const surname = user?.surname || "Surname"
+    const surname = user?.surname || "Surname";
     const location = useLocation();
 
     const handleLogout = () => {
@@ -63,7 +64,7 @@ function Dashboard() {
             {/* Mobile Dropdown Menu */}
             {!isQuizActive && (
                 <nav
-                    className={`${menuOpen ? "flex" : "hidden"} sm:hidden bg-gray-800 text-white p-4 border-b border-blue-800 shadow-md z-10 flex-col gap-2`}
+                    className={`${menuOpen ? "flex" : "hidden"} sm:hidden bg-gray-800 text-white p-4 border-b border-blue-800 shadow-md z-10 flex-col hike-gap-2`}
                 >
                     <Link
                         to="/dashboard"
@@ -183,7 +184,8 @@ function Dashboard() {
                             element={role === "admin" ? <EditQuiz /> : <Navigate to="/dashboard" />}
                         />
                         <Route path="attempt/:quizId" element={<AttemptQuiz setIsQuizActive={setIsQuizActive} />} />
-                        <Route path="profile" element={<Profile />} /> {/* Added profile route */}
+                        <Route path="quiz/:quizId/report" element={role === "admin" ? <QuizReport /> : <Navigate to="/dashboard" />} />
+                        <Route path="profile" element={<Profile />} />
                     </Routes>
                 </div>
             </main>
