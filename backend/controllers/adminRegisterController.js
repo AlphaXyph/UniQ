@@ -5,7 +5,8 @@ const crypto = require("crypto");
 function generateRandomString(length = 16) {
     return crypto.randomBytes(Math.ceil(length / 2)).toString("hex").slice(0, length);
 }
-// In getCurrentURL
+
+// Get the current admin registration URL
 exports.getCurrentURL = async (req, res) => {
     try {
         console.log("getCurrentURL: Fetching AdminRegisterURL...");
@@ -13,7 +14,7 @@ exports.getCurrentURL = async (req, res) => {
         if (!currentURL) {
             console.log("getCurrentURL: No URL found, creating new one...");
             const randomString = generateRandomString();
-            const newURL = `/admin-register/${randomString}`; // Changed to slash
+            const newURL = `/admin-register/${randomString}`; // Using slash as per previous fix
             const newAdminURL = new AdminRegisterURL({
                 url: newURL,
                 randomString,
@@ -32,33 +33,29 @@ exports.getCurrentURL = async (req, res) => {
     }
 };
 
-// In regenerateURL
+// Regenerate a new URL
 exports.regenerateURL = async (req, res) => {
     try {
         console.log("regenerateURL: Regenerating AdminRegisterURL...");
         const randomString = generateRandomString();
-        const newURL = `/admin-register/${randomString}`; // Changed to slash
+        const newURL = `/admin-register/${randomString}`; // Using slash as per previous fix
         const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
 
-        let currentURL = await AdminRegisterURL.findOne();
-        if (currentURL) {
-            currentURL.url = newURL;
-            currentURL.randomString = randomString;
-            currentURL.expiresAt = expiresAt;
-            currentURL.isActive = true;
-            await currentURL.save();
-            console.log("regenerateURL: URL updated:", currentURL);
-        } else {
-            currentURL = new AdminRegisterURL({
-                url: newURL,
-                randomString,
-                expiresAt,
-                isActive: true
-            });
-            await currentURL.save();
-            console.log("regenerateURL: New URL created:", currentURL);
-        }
-        res.json(currentURL);
+        // Delete all existing AdminRegisterURL documents to invalidate old URLs
+        await AdminRegisterURL.deleteMany({});
+        console.log("regenerateURL: Cleared all existing AdminRegisterURL documents");
+
+        // Create a new AdminRegisterURL document
+        const newAdminURL = new AdminRegisterURL({
+            url: newURL,
+            randomString,
+            expiresAt,
+            isActive: true
+        });
+        await newAdminURL.save();
+        console.log("regenerateURL: New URL created:", newAdminURL);
+
+        res.json(newAdminURL);
     } catch (err) {
         console.error("regenerateURL: Error:", err.message, err.stack);
         res.status(500).json({ msg: "Server error", error: err.message });

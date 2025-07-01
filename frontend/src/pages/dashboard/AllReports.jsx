@@ -14,11 +14,9 @@ function AllReports() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem("token");
-            console.log("Fetching all results");
             const res = await API.get("/result/all", {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            console.log("Results fetched:", res.data);
             const formattedResults = res.data.map((r) => ({
                 rollNo: r.student?.rollNo || "N/A",
                 name: `${r.student?.name || "Unknown"} ${r.student?.surname || ""}`.trim(),
@@ -33,7 +31,6 @@ function AllReports() {
             }));
             setResults(formattedResults);
         } catch (err) {
-            console.error("Fetch results error:", err.response?.data || err.message);
             setPopup({ message: err.response?.data?.msg || "Error loading results", type: "error" });
         } finally {
             setIsLoading(false);
@@ -46,7 +43,6 @@ function AllReports() {
 
     const handleSortChange = (e) => {
         const { name, value } = e.target;
-        console.log("Sort change:", { name, value });
         if (name === "sortBy") setSortBy(value);
         if (name === "order") setOrder(value);
     };
@@ -68,7 +64,6 @@ function AllReports() {
     };
 
     const groupedResults = useMemo(() => {
-        // Filter results based on search query
         const filtered = results.filter((entry) => {
             const searchLower = searchQuery.toLowerCase();
             return (
@@ -80,14 +75,12 @@ function AllReports() {
             );
         });
 
-        // Sort filtered results by createdAt (descending) for consistent grouping
         const sortedByDate = filtered.slice().sort((a, b) => {
             const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
             const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
             return dateB - dateA;
         });
 
-        // Group by date
         const grouped = sortedByDate.reduce((acc, entry) => {
             const date = entry.createdAt
                 ? new Date(entry.createdAt).toLocaleDateString("en-US", {
@@ -101,7 +94,6 @@ function AllReports() {
             return acc;
         }, {});
 
-        // Sort results within each date group by sortBy and order
         Object.keys(grouped).forEach((date) => {
             grouped[date].sort((a, b) => {
                 let valA = a[sortBy] || "";
@@ -180,32 +172,30 @@ function AllReports() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
-            <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="min-h-screen bg-gray-100 p-2 sm:p-4 md:p-5">
+            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-2 sm:p-4 md:p-5">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} />
-                <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <i className="fas fa-chart-bar"></i> All Quiz Results
+                <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
+                    <i className="fas fa-chart-bar text-base sm:text-lg"></i> All Quiz Results
                 </h2>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 mb-2 sm:mb-3">
                     <div className="flex flex-col w-full">
-                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">
-                            Search:
-                        </label>
+                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Search:</label>
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={handleSearchChange}
                             placeholder="Name, Roll, Branch, Div or Year"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                         />
                     </div>
                     <div className="flex flex-col w-full">
-                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Sort by:</label>
+                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Sort by:</label>
                         <select
                             name="sortBy"
                             value={sortBy}
                             onChange={handleSortChange}
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                         >
                             <option value="name">Name</option>
                             <option value="rollNo">Roll No</option>
@@ -216,60 +206,60 @@ function AllReports() {
                         </select>
                     </div>
                     <div className="flex flex-col w-full">
-                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Order:</label>
+                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Order:</label>
                         <select
                             name="order"
                             value={order}
                             onChange={handleSortChange}
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                         >
                             <option value="asc">Ascending</option>
                             <option value="desc">Descending</option>
                         </select>
                     </div>
-                    <div className="flex w-full sm:w-auto sm:ml-auto">
-                        <button
-                            onClick={downloadCSV}
-                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
-                            disabled={isLoading || sortedDates.length === 0}
-                        >
-                            <i className="fas fa-download"></i>
-                            <span>Download CSV</span>
-                        </button>
-                    </div>
+                </div>
+                <div className="mb-3 sm:mb-4">
+                    <button
+                        onClick={downloadCSV}
+                        className="w-auto flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs sm:text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
+                        disabled={isLoading || sortedDates.length === 0}
+                    >
+                        <i className="fas fa-download text-base p-1"></i>
+                        <span>Download CSV</span>
+                    </button>
                 </div>
                 {isLoading ? (
-                    <p className="text-gray-600 text-xs sm:text-sm">Loading results...</p>
+                    <p className="text-gray-500 text-xs sm:text-sm">Loading results...</p>
                 ) : sortedDates.length === 0 ? (
-                    <p className="text-gray-600 text-xs sm:text-sm">
+                    <p className="text-gray-500 text-xs sm:text-sm">
                         {searchQuery ? "No results match your search." : "No results available."}
                     </p>
                 ) : (
                     sortedDates.map((date) => (
-                        <div key={date} className="space-y-3 sm:space-y-4">
-                            <h3 className="text-base sm:text-lg font-semibold text-gray-800">{date}</h3>
-                            <ul className="space-y-2 sm:space-y-3">
+                        <div key={date} className="mb-3 sm:mb-4">
+                            <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">{date}</h3>
+                            <ul className="space-y-2">
                                 {groupedResults[date].map((entry, index) => (
                                     <li
                                         key={`${date}-${index}`}
-                                        className="p-3 sm:p-4 border border-gray-200 rounded-lg bg-gray-50 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 text-sm"
+                                        className="p-2 sm:p-3 bg-gray-50 rounded-md shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-3 text-xs sm:text-sm"
                                     >
                                         <div>
                                             <strong>{entry.rollNo}</strong>:{" "}
                                             <span className="group relative">
                                                 <strong>{entry.name}</strong>
-                                                <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs sm:text-sm rounded px-2 py-1 -top-8 left-0 z-10">
+                                                <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 -top-8 left-0 z-10">
                                                     {entry.email || "No Email"}
                                                 </span>
                                             </span>{" "}
-                                            from {entry.year}-{entry.branch}-{entry.division} took{" "}
+                                            from <strong>{entry.year}-{entry.branch}-{entry.division}</strong> attempted{" "}
                                             <strong>
                                                 {entry.subject} - {entry.topic}
                                             </strong>{" "}
                                             and scored{" "}
                                             <strong className={getScoreColor(entry.score)}>{entry.score}</strong>
                                         </div>
-                                        <span className="text-xs sm:text-sm text-gray-500">
+                                        <span className="text-xs text-gray-500">
                                             {entry.createdAt
                                                 ? new Date(entry.createdAt).toLocaleTimeString("en-US", {
                                                     hour: "2-digit",

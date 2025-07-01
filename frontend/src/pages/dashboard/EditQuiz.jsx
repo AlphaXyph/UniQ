@@ -144,8 +144,8 @@ function EditQuiz() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
-            <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="min-h-screen bg-gray-50 p-2 sm:p-4 md:p-5">
+            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-2 sm:p-4 md:p-5">
                 <Popup
                     message={popup.message}
                     type={popup.type}
@@ -154,99 +154,70 @@ function EditQuiz() {
                     confirmInput={popup.confirmInput}
                     setConfirmInput={(value) => setPopup({ ...popup, confirmInput: value })}
                 />
-                <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                    <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <i className="fas fa-pen-to-square"></i> Edit Quiz
+                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+                    <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
+                        <i className="fas fa-pen-to-square text-base sm:text-lg"></i> Edit Quiz
                     </h2>
                     <div>
-                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Subject</label>
-                        <div>
-                            <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Subject</label>
-                            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
-                                <div className="relative w-full">
-                                    <div
-                                        className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                    >
-                                        {subject || "Select Subject"}
-                                    </div>
-                                    {isDropdownOpen && (
-                                        <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 max-h-40 overflow-auto shadow-lg">
-                                            {subjects.length > 0 ? (
-                                                subjects.map((s, index) => (
-                                                    <li
-                                                        key={index}
-                                                        className="flex items-center justify-between p-2 hover:bg-gray-100 text-xs sm:text-sm truncate"
-                                                        onClick={() => {
-                                                            setSubject(s);
-                                                            setIsDropdownOpen(false);
-                                                        }}
-                                                    >
-                                                        <span>{s}</span>
-                                                        {user.role === "admin" && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDeleteSubject(s);
-                                                                }}
-                                                                className="text-red-500 hover:text-red-700 text-xs sm:text-sm"
-                                                                aria-label={`Remove ${s}`}
-                                                            >
-                                                                <i className="fas fa-trash"></i>
-                                                            </button>
-                                                        )}
-                                                    </li>
-                                                ))
-                                            ) : (
-                                                <li className="p-2 text-gray-600 text-xs sm:text-sm">No subjects available</li>
-                                            )}
-                                        </ul>
-                                    )}
+                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Subject</label>
+                        <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
+                            <div className="relative w-full">
+                                <div
+                                    className="w-full border border-gray-300 p-2 rounded-md bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                >
+                                    {subject || "Select Subject"}
                                 </div>
-                                {user.role === "admin" && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowNewSubjectInput(true)}
-                                        className="whitespace-nowrap px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-xs sm:text-sm"
-                                    >
-                                        <i className="fas fa-plus mr-1"></i> Add Subject
-                                    </button>
+                                {isDropdownOpen && (
+                                    <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-40 overflow-auto shadow-md">
+                                        {subjects.length > 0 ? (
+                                            subjects.map((s, index) => (
+                                                <li
+                                                    key={index}
+                                                    className="flex items-center justify-between p-2 hover:bg-gray-100 text-xs sm:text-sm truncate"
+                                                >
+                                                    <span onClick={() => { setSubject(s); setIsDropdownOpen(false); }}>{s}</span>
+                                                    {user.role === "admin" && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteSubject(s); }}
+                                                            className="text-red-500 hover:text-red-700 text-base p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition"
+                                                            aria-label={`Remove ${s}`}
+                                                        >
+                                                            <i className="fas fa-trash"></i>
+                                                        </button>
+                                                    )}
+                                                </li>
+                                            ))
+                                        ) : (
+                                            <li className="p-2 text-gray-500 text-xs sm:text-sm">No subjects available</li>
+                                        )}
+                                    </ul>
                                 )}
                             </div>
-                            {showNewSubjectInput && user.role === "admin" && (
-                                <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 mt-2 sm:mt-3">
-                                    <input
-                                        type="text"
-                                        value={newSubjectName}
-                                        onChange={(e) => setNewSubjectName(e.target.value)}
-                                        placeholder="New Subject Name"
-                                        className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={addSubject}
-                                        className="w-auto max-w-[100px] sm:max-w-[120px] px-3 sm:px-4 py-1 sm:py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-xs sm:text-sm"
-                                        disabled={!newSubjectName}
-                                    >
-                                        Add
-                                    </button>
-                                </div>
+                            {user.role === "admin" && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowNewSubjectInput(true)}
+                                    className="whitespace-nowrap px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs sm:text-sm"
+                                >
+                                    <i className="fas fa-plus mr-1"></i> Add Subject
+                                </button>
                             )}
                         </div>
                         {showNewSubjectInput && user.role === "admin" && (
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 mt-2 sm:mt-3">
+                            <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 mt-2">
                                 <input
                                     type="text"
                                     value={newSubjectName}
                                     onChange={(e) => setNewSubjectName(e.target.value)}
                                     placeholder="New Subject Name"
-                                    className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                                 />
                                 <button
                                     type="button"
                                     onClick={addSubject}
-                                    className="w-auto sm:w-32 p-2 sm:p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 text-xs sm:text-sm"
+                                    className="w-auto max-w-[100px] px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 text-xs sm:text-sm"
                                     disabled={!newSubjectName}
                                 >
                                     Add
@@ -255,28 +226,28 @@ function EditQuiz() {
                         )}
                     </div>
                     <div>
-                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Quiz Title</label>
+                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Quiz Title</label>
                         <input
                             type="text"
                             placeholder="Quiz Title"
-                            className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                         />
                     </div>
                     <div>
-                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Quiz Timer (minutes)</label>
+                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Quiz Timer (minutes)</label>
                         <input
                             type="number"
-                            className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                             value={timer}
                             onChange={(e) => setTimer(Number(e.target.value))}
                             min={1}
                         />
                     </div>
                     <div>
-                        <label className="block mb-2 font-semibold text-sm sm:text-base text-gray-700">Upload Questions (CSV)</label>
-                        <label className="inline-block w-auto sm:w-32 px-4 py-2 bg-blue-500 text-white rounded-lg cursor-pointer hover:bg-blue-600 text-xs sm:text-sm text-center">
+                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Upload Questions (CSV)</label>
+                        <label className="inline-block w-auto px-3 py-2 bg-blue-500 text-white rounded-md cursor-pointer hover:bg-blue-600 text-xs sm:text-sm text-center">
                             Upload CSV
                             <input
                                 type="file"
@@ -289,71 +260,80 @@ function EditQuiz() {
                     </div>
                     {questions.length > 0 ? (
                         questions.map((q, i) => (
-                            <div key={i} className="border border-gray-200 p-4 sm:p-6 bg-gray-50 rounded-lg shadow-sm space-y-3 relative">
+                            <div key={i} className="border border-gray-300 p-2 sm:p-3 bg-white rounded-md shadow-md space-y-2 relative">
                                 <button
                                     type="button"
-                                    className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xs sm:text-sm"
+                                    className="absolute top-2 sm:top-3 right-2 sm:right-3 text-red-500 hover:text-red-700 text-base p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition z-10"
                                     onClick={() => handleRemoveQuestion(i)}
                                     aria-label={`Remove question ${i + 1}`}
                                 >
                                     <i className="fas fa-trash"></i>
                                 </button>
-                                <input
-                                    type="text"
-                                    placeholder={`Question ${i + 1}`}
-                                    className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                                    value={q.question}
-                                    onChange={(e) => {
-                                        const copy = [...questions];
-                                        copy[i].question = e.target.value;
-                                        setQuestions(copy);
-                                    }}
-                                />
-                                {q.options.map((opt, j) => (
+                                <div className="flex flex-col gap-1 sm:gap-2">
+                                    <label className="block font-semibold text-xs sm:text-sm text-gray-700">Question:</label>
                                     <input
-                                        key={j}
                                         type="text"
-                                        placeholder={`Option ${j + 1}`}
-                                        className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                                        value={opt}
+                                        placeholder={`Question ${i + 1}`}
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                        value={q.question}
                                         onChange={(e) => {
                                             const copy = [...questions];
-                                            copy[i].options[j] = e.target.value;
+                                            copy[i].question = e.target.value;
                                             setQuestions(copy);
                                         }}
                                     />
-                                ))}
-                                <select
-                                    value={q.answer}
-                                    onChange={(e) => {
-                                        const copy = [...questions];
-                                        copy[i].answer = Number(e.target.value);
-                                        setQuestions(copy);
-                                    }}
-                                    className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                                >
-                                    {[0, 1, 2, 3].map((n) => (
-                                        <option key={n} value={n}>
-                                            Correct: Option {n + 1}
-                                        </option>
+                                </div>
+                                <div className="flex flex-col gap-1 sm:gap-2">
+                                    <label className="block font-semibold text-xs sm:text-sm text-gray-700">Options:</label>
+                                    {q.options.map((opt, j) => (
+                                        <input
+                                            key={j}
+                                            type="text"
+                                            placeholder={`Option ${j + 1}`}
+                                            className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                            value={opt}
+                                            onChange={(e) => {
+                                                const copy = [...questions];
+                                                copy[i].options[j] = e.target.value;
+                                                setQuestions(copy);
+                                            }}
+                                        />
                                     ))}
-                                </select>
+                                </div>
+                                <div className="flex flex-col gap-1 sm:gap-2">
+                                    <label className="block font-semibold text-xs sm:text-sm text-gray-700">Answer:</label>
+                                    <select
+                                        value={q.answer}
+                                        onChange={(e) => {
+                                            const copy = [...questions];
+                                            copy[i].answer = Number(e.target.value);
+                                            setQuestions(copy);
+                                        }}
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    >
+                                        {[0, 1, 2, 3].map((n) => (
+                                            <option key={n} value={n}>
+                                                Option {n + 1}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         ))
                     ) : (
-                        <p className="text-gray-600 text-xs sm:text-sm">No questions added. Upload a CSV or click "+ Add Question".</p>
+                        <p className="text-gray-500 text-xs sm:text-sm">No questions added. Upload a CSV or click "+ Add Question".</p>
                     )}
-                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                         <button
                             type="button"
-                            className="w-auto sm:w-32 p-2 sm:p-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-xs sm:text-sm"
+                            className="w-auto px-3 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 text-xs sm:text-sm"
                             onClick={handleAddQuestion}
                         >
                             <i className="fas fa-plus"></i> Add Question
                         </button>
                         <button
                             type="submit"
-                            className="w-auto sm:w-32 p-2 sm:p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 text-xs sm:text-sm"
+                            className="w-auto px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 text-xs sm:text-sm"
                         >
                             Update Quiz
                         </button>

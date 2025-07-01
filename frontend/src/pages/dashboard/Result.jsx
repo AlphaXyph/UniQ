@@ -11,14 +11,11 @@ function Result() {
         const fetch = async () => {
             try {
                 const token = localStorage.getItem("token");
-                console.log("Fetching results with token:", token);
                 const res = await API.get("/result/my", {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                console.log("Fetched results:", res.data);
                 setResults(res.data);
             } catch (err) {
-                console.error("Fetch results error:", err.response?.data || err.message);
                 setPopup({ message: err.response?.data?.msg || "Error loading results", type: "error" });
             }
         };
@@ -73,14 +70,14 @@ function Result() {
     }, {});
 
     return (
-        <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
-            <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="min-h-screen bg-gray-100 p-2 sm:p-4 md:p-5">
+            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-2 sm:p-4 md:p-5">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} />
-                <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <i className="fas fa-chart-bar"></i> Your Results
+                <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
+                    <i className="fas fa-chart-bar text-base sm:text-lg"></i> Your Results
                 </h2>
-                <div>
-                    <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">
+                <div className="mb-3 sm:mb-4">
+                    <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">
                         Search by Subject or Title
                     </label>
                     <input
@@ -88,21 +85,21 @@ function Result() {
                         placeholder="Search by subject or title"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                     />
                 </div>
                 {sortedDates.length === 0 && (
-                    <p className="text-gray-600 text-xs sm:text-sm">No results found.</p>
+                    <p className="text-gray-500 text-xs sm:text-sm">No results found.</p>
                 )}
                 {sortedDates.map((date) =>
                     filteredResults[date] ? (
-                        <div key={date} className="space-y-3 sm:space-y-4">
-                            <h3 className="text-base sm:text-lg font-semibold text-gray-800">{date}</h3>
-                            <ul className="space-y-2 sm:space-y-3">
+                        <div key={date} className="mb-3 sm:mb-4">
+                            <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">{date}</h3>
+                            <ul className="space-y-2">
                                 {filteredResults[date].map((r) => (
                                     <li
                                         key={r._id}
-                                        className="p-3 sm:p-4 border border-gray-200 rounded-lg bg-gray-50 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 text-sm"
+                                        className="p-2 sm:p-3 bg-gray-50 rounded-md shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-3 text-xs sm:text-sm"
                                     >
                                         <div>
                                             In <strong>{r.quiz?.subject || "No Subject"}</strong> -{" "}
@@ -111,7 +108,7 @@ function Result() {
                                                 {r.score}/{r.total}
                                             </span>
                                         </div>
-                                        <span className="text-xs sm:text-sm text-gray-500">
+                                        <span className="text-xs text-gray-500">
                                             {r.createdAt
                                                 ? new Date(r.createdAt).toLocaleTimeString("en-US", {
                                                     hour: "2-digit",

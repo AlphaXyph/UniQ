@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import API from "../../api";
 import Popup from "../components/Popup";
@@ -12,7 +12,27 @@ function AdminRegister() {
     const [surname, setSurname] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success" });
+    const [isValidUrl, setIsValidUrl] = useState(null); // null = loading, true = valid, false = invalid
     const navigate = useNavigate();
+
+    // Validate randomString on mount
+    useEffect(() => {
+        const validateUrl = async () => {
+            try {
+                console.log("AdminRegister: Validating randomString:", randomString);
+                await API.post("/auth/validate-admin-url", { randomString });
+                setIsValidUrl(true);
+                console.log("AdminRegister: URL is valid");
+            } catch (err) {
+                console.error("AdminRegister: URL validation error:", err.response?.data || err.message);
+                setIsValidUrl(false);
+                setPopup({ message: err.response?.data?.msg || "Invalid or expired registration URL", type: "error" });
+                // Redirect to login after 2 seconds
+                setTimeout(() => navigate("/"), 2000);
+            }
+        };
+        validateUrl();
+    }, [randomString, navigate]);
 
     const formatName = (value) => {
         if (!value) return value;
@@ -98,6 +118,25 @@ function AdminRegister() {
         setPopup({ message: "", type: "success" });
     };
 
+    // Show loading state while validating
+    if (isValidUrl === null) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                <p className="text-gray-800 text-lg">Validating URL...</p>
+            </div>
+        );
+    }
+
+    // Show error state (will redirect after popup)
+    if (isValidUrl === false) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                <Popup message={popup.message} type={popup.type} onClose={closePopup} />
+            </div>
+        );
+    }
+
+    // Render form for valid URL
     return (
         <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
             <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">

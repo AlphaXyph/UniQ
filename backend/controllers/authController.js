@@ -31,36 +31,7 @@ exports.register = async (req, res) => {
     }
 };
 
-// Login user
-exports.login = async (req, res) => {
-    const { email, password } = req.body;
-
-    try {
-        const user = await User.findOne({ email });
-        if (!user) return res.status(400).json({ msg: "Invalid email or password" });
-
-        const match = await bcrypt.compare(password, user.password);
-        if (!match) return res.status(400).json({ msg: "Invalid email or password" });
-
-        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-            expiresIn: "2h",
-        });
-
-        res.json({
-            token,
-            user: {
-                email: user.email,
-                role: user.role,
-                name: user.name,
-                surname: user.surname,
-                ...(user.role === "user" && { branch: user.branch, division: user.division, rollNo: user.rollNo, year: user.year }),
-            },
-        });
-    } catch (err) {
-        res.status(500).json({ msg: "Server error" });
-    }
-};
-
+// Admin register
 exports.adminRegister = async (req, res) => {
     const { email, password, name, surname, randomString } = req.body;
 
@@ -96,10 +67,56 @@ exports.adminRegister = async (req, res) => {
     }
 };
 
+// Validate admin URL
+exports.validateAdminUrl = async (req, res) => {
+    const { randomString } = req.body;
+
+    try {
+        const adminRegisterURL = await AdminRegisterURL.findOne({ randomString, isActive: true });
+        if (!adminRegisterURL || adminRegisterURL.expiresAt < Date.now()) {
+            return res.status(403).json({ msg: "Invalid or expired registration URL" });
+        }
+        res.status(200).json({ msg: "URL is valid" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: "Server error" });
+    }
+};
+
+// Login user
+exports.login = async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const user = await User.findOne({ email });
+        if (!user) return res.status(400).json({ msg: "Invalid email or password" });
+
+        const match = await bcrypt.compare(password, user.password);
+        if (!match) return res.status(400).json({ msg: "Invalid email or password" });
+
+        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+            expiresIn: "2h",
+        });
+
+        res.json({
+            token,
+            user: {
+                email: user.email,
+                role: user.role,
+                name: user.name,
+                surname: user.surname,
+                ...(user.role === "user" && { branch: user.branch, division: user.division, rollNo: user.rollNo, year: user.year }),
+            },
+        });
+    } catch (err) {
+        res.status(500).json({ msg: "Server error" });
+    }
+};
+
 // Get profile
 exports.getProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('-password'); // Exclude password
+        const user = await User.findById(req.user.id).select('-password');
         if (!user) return res.status(404).json({ msg: "User not found" });
         res.json(user);
     } catch (err) {
@@ -155,21 +172,20 @@ exports.changePassword = async (req, res) => {
 // Get all users (for admins only)
 exports.getAllUsers = async (req, res) => {
     try {
-        // Ensure only admins can access this endpoint
         if (req.user.role !== "admin") {
             return res.status(403).json({ msg: "Access denied. Admins only." });
         }
 
-        const users = await User.find().select('-password'); // Exclude passwords
+        const users = await User.find().select('-password');
         res.json(users);
     } catch (err) {
         res.status(500).json({ msg: "Server error" });
     }
 };
 
+// Delete user
 exports.deleteUser = async (req, res) => {
     try {
-        // Ensure only admins can delete users
         if (req.user.role !== "admin") {
             return res.status(403).json({ msg: "Access denied. Admins only." });
         }
@@ -178,7 +194,6 @@ exports.deleteUser = async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ msg: "User not found" });
 
-        // If the user is an admin, delete their created quizzes
         if (user.role === "admin") {
             await Quiz.deleteMany({ createdBy: userId });
         }
