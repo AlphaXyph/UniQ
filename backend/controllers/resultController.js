@@ -45,8 +45,10 @@ const getUserResults = async (req, res) => {
 const getAllResults = async (req, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ msg: "Admin access required" });
     try {
-        const results = await Result.find().populate("student", "email").populate("quiz", "title subject");
-        const filteredResults = results.filter((r) => r.quiz);
+        const results = await Result.find()
+            .populate("student", "name surname rollNo email year branch division")
+            .populate("quiz", "title subject");
+        const filteredResults = results.filter((r) => r.quiz && r.student);
         res.json(filteredResults);
     } catch (err) {
         console.error("Get all results error:", err.message, err.stack);
@@ -77,21 +79,22 @@ const getQuizReport = async (req, res) => {
 
         const results = await Result.find({ quiz: quizId })
             .populate("student", "name surname rollNo email year branch division")
-            .populate("quiz", "subject topic")
+            .populate("quiz", "subject title")
             .sort(sortFields[sortBy]);
 
         const formattedResults = results
             .filter((r) => r.quiz && r.student)
             .map((r) => ({
-                rollNo: r.student.rollNo,
-                name: `${r.student.name} ${r.student.surname}`,
-                email: r.student.email,
-                year: r.student.year,
-                branch: r.student.branch,
-                division: r.student.division,
-                subject: r.quiz.subject,
-                topic: r.quiz.topic,
-                score: `${r.score}/${r.total}`,
+                rollNo: r.student.rollNo || "N/A",
+                name: `${r.student.name || "Unknown"} ${r.student.surname || ""}`.trim(),
+                email: r.student.email || "No Email",
+                year: r.student.year || "N/A",
+                branch: r.student.branch || "N/A",
+                division: r.student.division || "N/A",
+                subject: r.quiz.subject || "Unknown",
+                topic: r.quiz.title || "Unknown",
+                score: `${r.score ?? 0}/${r.total ?? 0}`,
+                createdAt: r.createdAt,
             }));
 
         res.json(formattedResults);

@@ -102,7 +102,7 @@ function Result() {
                                 {filteredResults[date].map((r) => (
                                     <li
                                         key={r._id}
-                                        className="p-3 sm:p-4 border border-gray-200 rounded-lg bg-gray-50 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4"
+                                        className="p-3 sm:p-4 border border-gray-200 rounded-lg bg-gray-50 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 text-sm"
                                     >
                                         <div>
                                             In <strong>{r.quiz?.subject || "No Subject"}</strong> -{" "}

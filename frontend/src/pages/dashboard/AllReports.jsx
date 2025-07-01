@@ -1,54 +1,48 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { useParams } from "react-router-dom";
 import API from "../../../api";
 import Popup from "../../components/Popup";
 
-function QuizReport() {
-    const { quizId } = useParams();
-    const [report, setReport] = useState([]);
-    const [quiz, setQuiz] = useState({ subject: "", title: "" });
+function AllReports() {
+    const [results, setResults] = useState([]);
     const [popup, setPopup] = useState({ message: "", type: "success" });
     const [sortBy, setSortBy] = useState("name");
     const [order, setOrder] = useState("asc");
     const [isLoading, setIsLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
-    const fetchReport = useCallback(async () => {
+    const fetchResults = useCallback(async () => {
         setIsLoading(true);
         try {
             const token = localStorage.getItem("token");
-            console.log("Fetching report for quizId:", quizId);
-            const res = await API.get(`/result/quiz/${quizId}/report`, {
+            console.log("Fetching all results");
+            const res = await API.get("/result/all", {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            console.log("Report fetched:", res.data);
-            setReport(res.data);
+            console.log("Results fetched:", res.data);
+            const formattedResults = res.data.map((r) => ({
+                rollNo: r.student?.rollNo || "N/A",
+                name: `${r.student?.name || "Unknown"} ${r.student?.surname || ""}`.trim(),
+                email: r.student?.email || "No Email",
+                year: r.student?.year || "N/A",
+                branch: r.student?.branch || "N/A",
+                division: r.student?.division || "N/A",
+                subject: r.quiz?.subject || "Unknown",
+                topic: r.quiz?.title || "Unknown",
+                score: `${r.score ?? 0}/${r.total ?? 0}`,
+                createdAt: r.createdAt,
+            }));
+            setResults(formattedResults);
         } catch (err) {
-            console.error("Fetch report error:", err.response?.data || err.message);
-            setPopup({ message: err.response?.data?.msg || "Error loading report", type: "error" });
+            console.error("Fetch results error:", err.response?.data || err.message);
+            setPopup({ message: err.response?.data?.msg || "Error loading results", type: "error" });
         } finally {
             setIsLoading(false);
         }
-    }, [quizId]);
-
-    const fetchQuizDetails = useCallback(async () => {
-        try {
-            const token = localStorage.getItem("token");
-            console.log("Fetching quiz details for:", quizId);
-            const res = await API.get(`/quiz/${quizId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            setQuiz({ subject: res.data.subject || "Unknown", title: res.data.title || "Unknown" });
-        } catch (err) {
-            console.error("Fetch quiz details error:", err.response?.data || err.message);
-            setPopup({ message: err.response?.data?.msg || "Error loading quiz details", type: "error" });
-        }
-    }, [quizId]);
+    }, []);
 
     useEffect(() => {
-        fetchQuizDetails();
-        fetchReport();
-    }, [fetchQuizDetails, fetchReport]);
+        fetchResults();
+    }, [fetchResults]);
 
     const handleSortChange = (e) => {
         const { name, value } = e.target;
@@ -74,7 +68,8 @@ function QuizReport() {
     };
 
     const groupedResults = useMemo(() => {
-        const filtered = report.filter((entry) => {
+        // Filter results based on search query
+        const filtered = results.filter((entry) => {
             const searchLower = searchQuery.toLowerCase();
             return (
                 String(entry.name || "").toLowerCase().includes(searchLower) ||
@@ -85,12 +80,14 @@ function QuizReport() {
             );
         });
 
+        // Sort filtered results by createdAt (descending) for consistent grouping
         const sortedByDate = filtered.slice().sort((a, b) => {
             const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
             const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
             return dateB - dateA;
         });
 
+        // Group by date
         const grouped = sortedByDate.reduce((acc, entry) => {
             const date = entry.createdAt
                 ? new Date(entry.createdAt).toLocaleDateString("en-US", {
@@ -104,6 +101,7 @@ function QuizReport() {
             return acc;
         }, {});
 
+        // Sort results within each date group by sortBy and order
         Object.keys(grouped).forEach((date) => {
             grouped[date].sort((a, b) => {
                 let valA = a[sortBy] || "";
@@ -130,7 +128,7 @@ function QuizReport() {
         });
 
         return grouped;
-    }, [report, sortBy, order, searchQuery]);
+    }, [results, sortBy, order, searchQuery]);
 
     const sortedDates = useMemo(() => {
         return Object.keys(groupedResults).sort((a, b) => {
@@ -174,7 +172,7 @@ function QuizReport() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", `QuizReport_${String(quiz.subject || "Unknown")}_${String(quiz.title || "Unknown").replace(/\s+/g, "_")}.csv`);
+        link.setAttribute("download", "All_Quiz_Results.csv");
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -186,7 +184,7 @@ function QuizReport() {
             <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} />
                 <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <i className="fas fa-chart-bar"></i> Quiz Report
+                    <i className="fas fa-chart-bar"></i> All Quiz Results
                 </h2>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                     <div className="flex flex-col w-full">
@@ -244,7 +242,7 @@ function QuizReport() {
                     <p className="text-gray-600 text-xs sm:text-sm">Loading results...</p>
                 ) : sortedDates.length === 0 ? (
                     <p className="text-gray-600 text-xs sm:text-sm">
-                        {searchQuery ? "No results match your search." : "No results available for this quiz."}
+                        {searchQuery ? "No results match your search." : "No results available."}
                     </p>
                 ) : (
                     sortedDates.map((date) => (
@@ -291,4 +289,4 @@ function QuizReport() {
     );
 }
 
-export default QuizReport;
+export default AllReports;
