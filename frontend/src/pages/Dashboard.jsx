@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import Home from "./dashboard/Home";
 import AllReports from "./dashboard/AllReports";
@@ -10,17 +10,121 @@ import EditQuiz from "./dashboard/EditQuiz";
 import QuizReport from "./dashboard/QuizReport";
 import UserManagement from "./dashboard/UserManagement";
 import Popup from "../components/Popup";
+import api from "../../api";
 
 function Dashboard() {
     const navigate = useNavigate();
     const [menuOpen, setMenuOpen] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success" });
     const [isQuizActive, setIsQuizActive] = useState(false);
+    const [adminUrlData, setAdminUrlData] = useState({ url: "", expiresAt: null, isActive: true });
+    const [timeLeft, setTimeLeft] = useState("");
     const user = JSON.parse(localStorage.getItem("user")) || {};
     const role = user?.role || "user";
     const name = user?.name || "User";
     const surname = user?.surname || "";
     const location = useLocation();
+
+    // Memoize fetchAdminUrl to ensure stability
+    const fetchAdminUrl = useCallback(async () => {
+        try {
+            console.log("Dashboard: Fetching admin URL...");
+            const response = await api.get("/admin-register-url");
+            console.log("Dashboard: Admin URL response:", response.data);
+            setAdminUrlData(response.data);
+        } catch (err) {
+            console.error("Dashboard: Error fetching admin URL:", err.response?.data || err.message);
+            if (err.response?.status === 401) {
+                setPopup({ message: "Session expired, please log in again", type: "error" });
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                setTimeout(() => navigate("/"), 2000);
+            } else {
+                setPopup({ message: err.response?.data?.msg || "Failed to fetch admin URL", type: "error" });
+            }
+        }
+    }, [navigate]);
+
+    // Check token and fetch admin URL on mount (for admins only)
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        console.log("Dashboard: Token:", token);
+        if (!token) {
+            console.log("Dashboard: No token found, redirecting to login...");
+            setPopup({ message: "Please log in again", type: "error" });
+            setTimeout(() => navigate("/"), 2000);
+            return;
+        }
+        if (role === "admin") {
+            fetchAdminUrl();
+        }
+    }, [role, navigate, fetchAdminUrl]); // Added fetchAdminUrl to dependencies
+
+    // Update countdown timer every second
+    useEffect(() => {
+        if (adminUrlData.expiresAt) {
+            const timer = setInterval(() => {
+                const now = new Date();
+                const expires = new Date(adminUrlData.expiresAt);
+                const diff = expires - now;
+                if (diff <= 0) {
+                    setTimeLeft("Expired");
+                    if (role === "admin") {
+                        fetchAdminUrl();
+                    }
+                } else {
+                    const hours = Math.floor(diff / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                    setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
+                }
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [adminUrlData.expiresAt, role, fetchAdminUrl]); // Added fetchAdminUrl to dependencies
+
+    const regenerateUrl = async () => {
+        try {
+            console.log("Dashboard: Regenerating admin URL...");
+            const response = await api.post("/admin-register-url/regenerate");
+            console.log("Dashboard: Regenerate URL response:", response.data);
+            setAdminUrlData(response.data);
+            setPopup({ message: "Admin URL regenerated successfully", type: "success" });
+        } catch (err) {
+            console.error("Dashboard: Error regenerating admin URL:", err.response?.data || err.message);
+            if (err.response?.status === 401) {
+                setPopup({ message: "Session expired, please log in again", type: "error" });
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                setTimeout(() => navigate("/"), 2000);
+            } else {
+                setPopup({ message: err.response?.data?.msg || "Failed to regenerate admin URL", type: "error" });
+            }
+        }
+    };
+
+    const toggleActive = async () => {
+        try {
+            console.log("Dashboard: Toggling admin registration status...");
+            const response = await api.post("/admin-register-url/toggle-active");
+            console.log("Dashboard: Toggle active response:", response.data);
+            setAdminUrlData(response.data);
+            setPopup({
+                message: `Admin registration page ${response.data.isActive ? "resumed" : "paused"}`,
+                type: "success",
+            });
+        } catch (err) {
+            console.error("Dashboard: Error toggling admin registration:", err.response?.data || err.message);
+            if (err.response?.status === 401) {
+                setPopup({ message: "Session expired, please log in again", type: "error" });
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                setTimeout(() => navigate("/"), 2000);
+            } else {
+                setPopup({ message: err.response?.data?.msg || "Failed to toggle admin registration", type: "error" });
+            }
+        }
+    };
 
     const handleLogout = () => {
         localStorage.removeItem("token");
@@ -72,13 +176,11 @@ function Dashboard() {
             {/* Mobile Dropdown Menu */}
             {!isQuizActive && (
                 <nav
-                    className={`${menuOpen ? "block" : "hidden"
-                        } md:hidden bg-gray-800 text-white px-4 pt-[4rem] pb-4 flex flex-col gap-3 shadow-md fixed top-0 left-0 right-0 z-10 overflow-y-auto h-[calc(100vh-4rem)]`}
+                    className={`${menuOpen ? "block" : "hidden"} md:hidden bg-gray-800 text-white px-4 pt-[4rem] pb-4 flex flex-col gap-3 shadow-md fixed top-0 left-0 right-0 z-10 overflow-y-auto h-[calc(100vh-4rem)]`}
                 >
                     <Link
                         to="/dashboard"
-                        className={`px-4 py-3 rounded-lg text-base min-h-[44px] ${isActive("/dashboard") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"
-                            } transition-colors duration-200 flex items-center gap-3 w-full`}
+                        className={`px-4 py-3 rounded-lg text-base min-h-[44px] ${isActive("/dashboard") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 flex items-center gap-3 w-full`}
                         onClick={() => setMenuOpen(false)}
                     >
                         <i className="fa-solid fa-house w-5 text-center"></i> Home
@@ -87,42 +189,59 @@ function Dashboard() {
                         <>
                             <Link
                                 to="/dashboard/create"
-                                className={`px-4 py-3 rounded-lg text-base min-h-[44px] ${isActive("/dashboard/create")
-                                        ? "bg-gray-900 text-green-400"
-                                        : "hover:bg-gray-600 hover:text-white"
-                                    } transition-colors duration-200 flex items-center gap-3 w-full`}
+                                className={`px-4 py-3 rounded-lg text-base min-h-[44px] ${isActive("/dashboard/create") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 flex items-center gap-3 w-full`}
                                 onClick={() => setMenuOpen(false)}
                             >
                                 <i className="fa-solid fa-plus-square w-5 text-center"></i> Create Quiz
                             </Link>
                             <Link
                                 to="/dashboard/allreports"
-                                className={`px-4 py-3 rounded-lg text-base min-h-[44px] ${isActive("/dashboard/allreports")
-                                        ? "bg-gray-900 text-green-400"
-                                        : "hover:bg-gray-600 hover:text-white"
-                                    } transition-colors duration-200 flex items-center gap-3 w-full`}
+                                className={`px-4 py-3 rounded-lg text-base min-h-[44px] ${isActive("/dashboard/allreports") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 flex items-center gap-3 w-full`}
                                 onClick={() => setMenuOpen(false)}
                             >
                                 <i className="fa-solid fa-chart-simple w-5 text-center"></i> Reports
                             </Link>
                             <Link
                                 to="/dashboard/users"
-                                className={`px-4 py-3 rounded-lg text-base min-h-[44px] ${isActive("/dashboard/users")
-                                        ? "bg-gray-900 text-green-400"
-                                        : "hover:bg-gray-600 hover:text-white"
-                                    } transition-colors duration-200 flex items-center gap-3 w-full`}
+                                className={`px-4 py-3 rounded-lg text-base min-h-[44px] ${isActive("/dashboard/users") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 flex items-center gap-3 w-full`}
                                 onClick={() => setMenuOpen(false)}
                             >
                                 <i className="fa-solid fa-users-cog w-5 text-center"></i> User Management
                             </Link>
+                            {/* Admin Registration URL Controls */}
+                            <div className="px-4 py-3 bg-gray-900 rounded-lg w-full">
+                                <p className="text-sm text-green-200 truncate">
+                                    Admin URL: {adminUrlData.url || "Not set"}
+                                </p>
+                                <p className="text-sm text-green-200">
+                                    Expires in: {timeLeft || "N/A"}
+                                </p>
+                                <div className="flex flex-col gap-2 mt-2">
+                                    <button
+                                        onClick={fetchAdminUrl}
+                                        className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm transition-colors duration-200 flex items-center gap-3 w-full min-h-[44px]"
+                                    >
+                                        <i className="fa-solid fa-link w-5 text-center"></i> Get Admin URL
+                                    </button>
+                                    <button
+                                        onClick={regenerateUrl}
+                                        className="px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white text-sm transition-colors duration-200 flex items-center gap-3 w-full min-h-[44px]"
+                                    >
+                                        <i className="fa-solid fa-sync-alt w-5 text-center"></i> Regenerate URL
+                                    </button>
+                                    <button
+                                        onClick={toggleActive}
+                                        className={`px-4 py-2 rounded-lg ${adminUrlData.isActive ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"} text-white text-sm transition-colors duration-200 flex items-center gap-3 w-full min-h-[44px]`}
+                                    >
+                                        <i className="fa-solid fa-pause w-5 text-center"></i> {adminUrlData.isActive ? "Pause" : "Resume"} Registration
+                                    </button>
+                                </div>
+                            </div>
                         </>
                     ) : (
                         <Link
                             to="/dashboard/result"
-                            className={`px-4 py-3 rounded-lg text-base min-h-[44px] ${isActive("/dashboard/result")
-                                    ? "bg-gray-900 text-green-400"
-                                    : "hover:bg-gray-600 hover:text-white"
-                                } transition-colors duration-200 flex items-center gap-3 w-full`}
+                            className={`px-4 py-3 rounded-lg text-base min-h-[44px] ${isActive("/dashboard/result") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 flex items-center gap-3 w-full`}
                             onClick={() => setMenuOpen(false)}
                         >
                             <i className="fa-solid fa-chart-simple w-5 text-center"></i> Result
@@ -161,8 +280,7 @@ function Dashboard() {
                     <nav className="flex flex-col justify-center items-center gap-3 flex-grow w-full">
                         <Link
                             to="/dashboard"
-                            className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm min-h-[44px] ${isActive("/dashboard") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"
-                                } transition-colors duration-200`}
+                            className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm min-h-[44px] ${isActive("/dashboard") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200`}
                         >
                             <i className="fa-solid fa-house w-5 text-center"></i> Home
                         </Link>
@@ -170,39 +288,56 @@ function Dashboard() {
                             <>
                                 <Link
                                     to="/dashboard/create"
-                                    className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm min-h-[44px] ${isActive("/dashboard/create")
-                                            ? "bg-gray-900 text-green-400"
-                                            : "hover:bg-gray-600 hover:text-white"
-                                        } transition-colors duration-200`}
+                                    className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm min-h-[44px] ${isActive("/dashboard/create") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200`}
                                 >
-                                    <i className="fa-solid fa-hexagon-nodes w-5 text-center"></i> Create Quiz
+                                    <i className="fa-solid fa-plus-square w-5 text-center"></i> Create Quiz
                                 </Link>
                                 <Link
                                     to="/dashboard/allreports"
-                                    className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm min-h-[44px] ${isActive("/dashboard/allreports")
-                                            ? "bg-gray-900 text-green-400"
-                                            : "hover:bg-gray-600 hover:text-white"
-                                        } transition-colors duration-200`}
+                                    className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm min-h-[44px] ${isActive("/dashboard/allreports") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200`}
                                 >
                                     <i className="fa-solid fa-chart-simple w-5 text-center"></i> Reports
                                 </Link>
                                 <Link
                                     to="/dashboard/users"
-                                    className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm min-h-[44px] ${isActive("/dashboard/users")
-                                            ? "bg-gray-900 text-green-400"
-                                            : "hover:bg-gray-600 hover:text-white"
-                                        } transition-colors duration-200`}
+                                    className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm min-h-[44px] ${isActive("/dashboard/users") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200`}
                                 >
                                     <i className="fa-solid fa-users-cog w-5 text-center"></i> User Management
                                 </Link>
+                                {/* Admin Registration URL Controls */}
+                                <div className="px-4 py-2 bg-gray-900 rounded-lg w-full">
+                                    <p className="text-sm text-green-200 truncate">
+                                        Admin URL: {adminUrlData.url || "Not set"}
+                                    </p>
+                                    <p className="text-sm text-green-200">
+                                        Expires in: {timeLeft || "N/A"}
+                                    </p>
+                                    <div className="flex flex-col gap-2 mt-2">
+                                        <button
+                                            onClick={fetchAdminUrl}
+                                            className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm transition-colors duration-200 flex items-center gap-3 w-full min-h-[44px]"
+                                        >
+                                            <i className="fa-solid fa-link w-5 text-center"></i> Get Admin URL
+                                        </button>
+                                        <button
+                                            onClick={regenerateUrl}
+                                            className="px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white text-sm transition-colors duration-200 flex items-center gap-3 w-full min-h-[44px]"
+                                        >
+                                            <i className="fa-solid fa-sync-alt w-5 text-center"></i> Regenerate URL
+                                        </button>
+                                        <button
+                                            onClick={toggleActive}
+                                            className={`px-4 py-2 rounded-lg ${adminUrlData.isActive ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"} text-white text-sm transition-colors duration-200 flex items-center gap-3 w-full min-h-[44px]`}
+                                        >
+                                            <i className="fa-solid fa-pause w-5 text-center"></i> {adminUrlData.isActive ? "Pause" : "Resume"} Registration
+                                        </button>
+                                    </div>
+                                </div>
                             </>
                         ) : (
                             <Link
                                 to="/dashboard/result"
-                                className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm min-h-[44px] ${isActive("/dashboard/result")
-                                        ? "bg-gray-900 text-green-400"
-                                        : "hover:bg-gray-600 hover:text-white"
-                                    } transition-colors duration-200`}
+                                className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm min-h-[44px] ${isActive("/dashboard/result") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200`}
                             >
                                 <i className="fa-solid fa-chart-simple w-5 text-center"></i> Result
                             </Link>
@@ -219,10 +354,7 @@ function Dashboard() {
 
             {/* Main Content */}
             <main
-                className={`flex-1 p-4 w-full ${isQuizActive
-                        ? "pt-0"
-                        : "pt-[4rem] md:pt-4 md:pl-[13rem] lg:pl-[17rem] xl:pl-[19rem]"
-                    }`}
+                className={`flex-1 p-4 w-full ${isQuizActive ? "pt-0" : "pt-[4rem] md:pt-4 md:pl-[13rem] lg:pl-[17rem] xl:pl-[19rem]"}`}
             >
                 <div className="w-full max-w-full sm:max-w-5xl mx-auto bg-white rounded-lg shadow-sm p-4 md:p-6">
                     <Routes>
