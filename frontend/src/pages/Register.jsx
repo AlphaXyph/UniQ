@@ -149,96 +149,127 @@ function Register() {
         setPopup({ message: "", type: "success" });
     };
 
-    const toggleShowPassword = () => {
-        setShowPassword(!showPassword);
-    };
-
     return (
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-            <Popup message={popup.message} type={popup.type} onClose={closePopup} />
-            <div className="w-full max-w-4xl bg-white shadow-md rounded-lg overflow-hidden">
-                <div className="p-6">
-                    <h2 className="text-2xl font-bold text-center mb-6">Register</h2>
-                    <form onSubmit={handleRegister} className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+        <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
+            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <Popup message={popup.message} type={popup.type} onClose={closePopup} />
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800 text-center flex items-center gap-2">
+                    <i className="fas fa-user-plus"></i> Register
+                </h2>
+                <form onSubmit={handleRegister} className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="col-span-full">
+                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Role</label>
                         <select
                             value={role}
                             onChange={(e) => setRole(e.target.value)}
-                            className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 col-span-full"
+                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                         >
                             <option value="user">Student</option>
                             <option value="admin">Teacher</option>
                         </select>
+                    </div>
+                    <div className="col-span-full">
+                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Email</label>
                         <input
                             type="email"
                             placeholder="Email (must end with @ves.ac.in)"
-                            className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 col-span-full"
+                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />
-                        <div className="relative">
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                placeholder="Password (8+ chars, mixed case, number, special char)"
-                                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                            />
-                            <button
-                                type="button"
-                                onClick={toggleShowPassword}
-                                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                            >
-                                {showPassword ? "Hide" : "Show"}
-                            </button>
-                        </div>
+                    </div>
+                    <div className="relative">
+                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Password</label>
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Password (8+ chars, mixed case, number, special char)"
+                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-2 top-2/3 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs sm:text-sm"
+                        >
+                            <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
+                        </button>
+                    </div>
+                    <div className="relative">
+                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Confirm Password</label>
                         <input
                             type={showPassword ? "text" : "password"}
                             placeholder="Confirm Password"
-                            className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-2 top-2/3 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs sm:text-sm"
+                        >
+                            <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
+                        </button>
+                    </div>
+                    <div>
+                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Name</label>
                         <input
                             type="text"
                             placeholder="Name (max 20 chars)"
-                            className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                         />
+                    </div>
+                    <div>
+                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Surname</label>
                         <input
                             type="text"
                             placeholder="Surname (max 20 chars)"
-                            className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                             value={surname}
                             onChange={(e) => setSurname(e.target.value)}
                         />
-                        {role === "user" && (
-                            <>
+                    </div>
+                    {role === "user" && (
+                        <>
+                            <div>
+                                <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Branch</label>
                                 <input
                                     type="text"
                                     placeholder="Branch (max 4 chars)"
-                                    className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                                     value={branch}
                                     onChange={(e) => setBranch(e.target.value)}
                                 />
+                            </div>
+                            <div>
+                                <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Division</label>
                                 <input
                                     type="text"
                                     placeholder="Division (max 2 chars)"
-                                    className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                                     value={division}
                                     onChange={(e) => setDivision(e.target.value)}
                                 />
+                            </div>
+                            <div>
+                                <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Roll Number</label>
                                 <input
                                     type="number"
                                     placeholder="Roll No (max 3 digits)"
-                                    className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                                     value={rollNo}
                                     onChange={(e) => setRollNo(e.target.value)}
                                 />
+                            </div>
+                            <div>
+                                <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Year</label>
                                 <select
                                     value={year}
                                     onChange={(e) => setYear(e.target.value)}
-                                    className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                                 >
                                     <option value="">Select Year</option>
                                     <option value="FY">FY</option>
@@ -246,23 +277,28 @@ function Register() {
                                     <option value="TY">TY</option>
                                     <option value="FOURTH">FOURTH</option>
                                 </select>
-                            </>
-                        )}
-                        <button type="submit" className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600 col-span-full">
+                            </div>
+                        </>
+                    )}
+                    <div className="col-span-full flex justify-center">
+                        <button
+                            type="submit"
+                            className="px-6 py-2 w-1/3 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm"
+                        >
                             Register
                         </button>
-                        <div className="text-center col-span-full">
-                            <p>Already have an account?</p>
-                            <button
-                                type="button"
-                                onClick={() => navigate("/")}
-                                className="text-blue-600 underline mt-2"
-                            >
-                                Login Here
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    </div>
+                    <div className="col-span-full flex flex-col items-center justify-center">
+                        <p className="text-black text-sm mr-1">Already have an account?</p>
+                        <button
+                            type="button"
+                            onClick={() => navigate("/")}
+                            className="text-blue-500 text-sm my-2 hover:underline"
+                        >
+                            Login Here
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );

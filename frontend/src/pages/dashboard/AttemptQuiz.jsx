@@ -6,7 +6,7 @@ import Popup from "../../components/Popup";
 function AttemptQuiz({ setIsQuizActive }) {
     const { quizId } = useParams();
     const [quiz, setQuiz] = useState(null);
-    const [originalIndices, setOriginalIndices] = useState([]); // Track original indices
+    const [originalIndices, setOriginalIndices] = useState([]);
     const [answers, setAnswers] = useState([]);
     const [popup, setPopup] = useState({ message: "", type: "success", confirmAction: null });
     const [isStarted, setIsStarted] = useState(false);
@@ -17,7 +17,6 @@ function AttemptQuiz({ setIsQuizActive }) {
     const role = user?.role || "user";
     const MAX_VIOLATIONS = 3;
 
-    // Fisher-Yates shuffle with index mapping
     const shuffleArray = (array) => {
         const shuffled = [...array];
         const indices = array.map((_, index) => index);
@@ -68,7 +67,6 @@ function AttemptQuiz({ setIsQuizActive }) {
 
             try {
                 const token = localStorage.getItem("token");
-                // Reorder answers to match original question order
                 const orderedAnswers = role === "user" ? answers.map((_, i) => answers[originalIndices.indexOf(i)]) : answers;
                 await API.post(
                     "/result/submit",
@@ -193,83 +191,96 @@ function AttemptQuiz({ setIsQuizActive }) {
     const closePopup = () => setPopup({ message: "", type: "success", confirmAction: null });
     const formatTime = (seconds) => `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, "0")}`;
 
-    if (!quiz) return <p>Loading...</p>;
+    if (!quiz) return <div className="min-h-screen bg-gray-100 p-4 sm:p-6"><p className="text-center text-gray-600 text-xs sm:text-sm">Loading...</p></div>;
 
     if (role === "admin") {
         return (
-            <div className="relative space-y-6">
-                <Popup message={popup.message} type={popup.type} onClose={closePopup} confirmAction={popup.confirmAction} />
-                <h2 className="text-2xl font-bold">{quiz.subject} - {quiz.title}</h2>
-                <p className="text-lg">Subject: {quiz.subject}</p>
-                {quiz.questions.map((q, i) => (
-                    <div key={q._id || i} className="p-4 border rounded bg-white">
-                        <p className="font-semibold">{i + 1}. {q.question}</p>
-                        {q.options.map((opt, j) => (
-                            <p key={j} className="ml-2">{j + 1}. {opt} {q.answer === j ? "( ✔️Correct )" : ""}</p>
-                        ))}
-                    </div>
-                ))}
-                <button onClick={() => navigate("/dashboard")} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                    Back to Dashboard
-                </button>
-            </div>
-        );
-    }
-
-    if (!isStarted) {
-        return (
-            <div className="relative space-y-6">
-                <Popup message={popup.message} type={popup.type} onClose={closePopup} confirmAction={popup.confirmAction} />
-                <h2 className="text-2xl font-bold">{quiz.title}</h2>
-                <p className="text-lg">Subject: {quiz.subject}</p>
-                <div className="p-4 border rounded bg-white">
-                    <h3 className="text-lg font-semibold mb-2">Instructions</h3>
-                    <ul className="list-disc pl-5 space-y-2">
-                        <li>This quiz must be completed in {quiz.timer} minute{quiz.timer !== 1 ? "s" : ""}.</li>
-                        <li>Total Questions: {quiz.questions.length}</li>
-                        <li>Once submitted, you cannot change your answers.</li>
-                        <li>Stay in fullscreen mode and on this tab at all times.</li>
-                        <li>{MAX_VIOLATIONS} attempts allowed before auto-submission.</li>
-                    </ul>
-                    <button onClick={() => setIsStarted(true)} className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-                        Start Quiz
+            <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
+                <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
+                    <Popup message={popup.message} type={popup.type} onClose={closePopup} confirmAction={popup.confirmAction} />
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-800">{quiz.subject} - {quiz.title}</h2>
+                    <p className="text-sm sm:text-base text-gray-600">Subject: {quiz.subject}</p>
+                    {quiz.questions.map((q, i) => (
+                        <div key={q._id || i} className="p-4 sm:p-6 border border-gray-200 rounded-lg bg-gray-50 shadow-sm">
+                            <p className="font-semibold text-xs sm:text-sm">{i + 1}. {q.question}</p>
+                            {q.options.map((opt, j) => (
+                                <p key={j} className="ml-2 text-xs sm:text-sm">{j + 1}. {opt} {q.answer === j ? <span className="text-green-600">(✔️ Correct)</span> : ""}</p>
+                            ))}
+                        </div>
+                    ))}
+                    <button
+                        onClick={() => navigate("/dashboard")}
+                        className="w-full sm:w-auto p-2 sm:p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-xs sm:text-sm"
+                    >
+                        <i className="fas fa-arrow-left"></i> Back to Dashboard
                     </button>
                 </div>
             </div>
         );
     }
 
-    return (
-        <div className="relative space-y-6">
-            <Popup message={popup.message} type={popup.type} onClose={closePopup} confirmAction={popup.confirmAction} />
-            <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold">{quiz.subject} - {quiz.title}</h2>
-                <p className="text-lg font-semibold text-red-500">Time Left: {formatTime(timeLeft)}</p>
-            </div>
-            {quiz.questions.map((q, i) => (
-                <div key={q._id || i} className="p-4 border rounded bg-white">
-                    <p className="font-semibold">{i + 1}. {q.question}</p>
-                    {q.options.map((opt, j) => (
-                        <label key={j} className="block">
-                            <input
-                                type="radio"
-                                name={`q${i}`}
-                                checked={answers[i] === j}
-                                onChange={() => handleOptionChange(i, j)}
-                                disabled={timeLeft === 0}
-                            />
-                            <span className="ml-2">{opt}</span>
-                        </label>
-                    ))}
+    if (!isStarted) {
+        return (
+            <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
+                <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
+                    <Popup message={popup.message} type={popup.type} onClose={closePopup} confirmAction={popup.confirmAction} />
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-800">{quiz.title}</h2>
+                    <p className="text-sm sm:text-base text-gray-600">Subject: {quiz.subject}</p>
+                    <div className="p-4 sm:p-6 border border-gray-200 rounded-lg bg-gray-50 shadow-sm">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3">Instructions</h3>
+                        <ul className="list-disc pl-5 space-y-2 text-xs sm:text-sm text-gray-600">
+                            <li>This quiz must be completed in {quiz.timer} minute{quiz.timer !== 1 ? "s" : ""}.</li>
+                            <li>Total Questions: {quiz.questions.length}</li>
+                            <li>Once submitted, you cannot change your answers.</li>
+                            <li>Stay in fullscreen mode and on this tab at all times.</li>
+                            <li>{MAX_VIOLATIONS} attempts allowed before auto-submission.</li>
+                        </ul>
+                        <button
+                            onClick={() => setIsStarted(true)}
+                            className="mt-3 sm:mt-4 w-full sm:w-auto p-2 sm:p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 text-xs sm:text-sm"
+                        >
+                            Start Quiz
+                        </button>
+                    </div>
                 </div>
-            ))}
-            <button
-                onClick={() => handleSubmit(false)}
-                className={`bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 ${timeLeft === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
-                disabled={timeLeft === 0}
-            >
-                Submit Quiz
-            </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
+            <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <Popup message={popup.message} type={popup.type} onClose={closePopup} confirmAction={popup.confirmAction} />
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-800">{quiz.subject} - {quiz.title}</h2>
+                    <p className="text-sm sm:text-base font-semibold text-red-600">Time Left: {formatTime(timeLeft)}</p>
+                </div>
+                {quiz.questions.map((q, i) => (
+                    <div key={q._id || i} className="p-4 sm:p-6 border border-gray-200 rounded-lg bg-gray-50 shadow-sm">
+                        <p className="font-semibold text-xs sm:text-sm">{i + 1}. {q.question}</p>
+                        {q.options.map((opt, j) => (
+                            <label key={j} className="block mt-2 text-xs sm:text-sm">
+                                <input
+                                    type="radio"
+                                    name={`q${i}`}
+                                    checked={answers[i] === j}
+                                    onChange={() => handleOptionChange(i, j)}
+                                    disabled={timeLeft === 0}
+                                    className="mr-2"
+                                />
+                                <span>{opt}</span>
+                            </label>
+                        ))}
+                    </div>
+                ))}
+                <button
+                    onClick={() => handleSubmit(false)}
+                    className={`w-full sm:w-auto p-2 sm:p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 text-xs sm:text-sm ${timeLeft === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                    disabled={timeLeft === 0}
+                >
+                    Submit Quiz
+                </button>
+            </div>
         </div>
     );
 }

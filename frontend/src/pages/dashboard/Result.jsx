@@ -1,240 +1,134 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import API from "../../../api";
-import { Link, useNavigate } from "react-router-dom";
 import Popup from "../../components/Popup";
 
-function Home() {
-    const [quizzes, setQuizzes] = useState([]);
+function Result() {
+    const [results, setResults] = useState([]);
     const [popup, setPopup] = useState({ message: "", type: "success" });
-    const [deleteConfirm, setDeleteConfirm] = useState({ show: false, quizId: null });
-    const user = JSON.parse(localStorage.getItem("user"));
-    const role = user?.role;
-    const navigate = useNavigate();
-
-    const fetchQuizzes = async () => {
-        try {
-            const token = localStorage.getItem("token");
-            console.log("Fetching quizzes with token:", token);
-            const res = await API.get("/quiz/all", {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            console.log("Fetched quizzes:", res.data);
-            // Log createdAt values to debug
-            res.data.forEach((quiz, index) => {
-                console.log(`Quiz ${index + 1} createdAt:`, quiz.createdAt);
-            });
-            setQuizzes(res.data);
-        } catch (err) {
-            console.error("Fetch quizzes error:", err.response?.data || err.message);
-            setPopup({ message: err.response?.data?.msg || "Error loading quizzes", type: "error" });
-        }
-    };
+    const [searchTerm, setSearchTerm] = useState("");
 
     useEffect(() => {
-        fetchQuizzes();
+        const fetch = async () => {
+            try {
+                const token = localStorage.getItem("token");
+                console.log("Fetching results with token:", token);
+                const res = await API.get("/result/my", {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                console.log("Fetched results:", res.data);
+                setResults(res.data);
+            } catch (err) {
+                console.error("Fetch results error:", err.response?.data || err.message);
+                setPopup({ message: err.response?.data?.msg || "Error loading results", type: "error" });
+            }
+        };
+        fetch();
     }, []);
-
-    const groupedQuizzes = useMemo(() => {
-        // Group quizzes by date and sort by date descending
-        const grouped = quizzes
-            .slice()
-            .sort((a, b) => {
-                const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
-                const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
-                return dateB - dateA; // Sort quizzes within date descending
-            })
-            .reduce((acc, quiz) => {
-                const date = quiz.createdAt
-                    ? new Date(quiz.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                    })
-                    : "Unknown Date";
-                if (!acc[date]) acc[date] = [];
-                acc[date].push(quiz);
-                return acc;
-            }, {});
-
-        // Sort dates in descending order
-        const sortedDates = Object.keys(grouped).sort((a, b) => {
-            if (a === "Unknown Date") return 1;
-            if (b === "Unknown Date") return -1;
-            return new Date(b) - new Date(a);
-        });
-
-        console.log("Grouped quizzes:", grouped);
-        console.log("Sorted dates:", sortedDates);
-
-        return { grouped, sortedDates };
-    }, [quizzes]);
-
-    const handleEdit = (quizId) => {
-        console.log("Navigating to edit:", quizId);
-        navigate(`/dashboard/edit/${quizId}`);
-    };
-
-    const handleDelete = (quizId) => {
-        console.log("Initiating delete for quiz:", quizId);
-        setDeleteConfirm({ show: true, quizId });
-    };
-
-    const confirmDelete = async () => {
-        try {
-            const token = localStorage.getItem("token");
-            console.log("Deleting quiz:", deleteConfirm.quizId, "with token:", token);
-            const response = await API.delete(`/quiz/${deleteConfirm.quizId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            console.log("Delete response:", response.data);
-            setPopup({ message: "Quiz deleted", type: "success" });
-            fetchQuizzes();
-        } catch (err) {
-            console.error("Delete quiz error:", err.response?.data || err.message);
-            setPopup({ message: err.response?.data?.msg || "Error deleting quiz", type: "error" });
-        }
-        setDeleteConfirm({ show: false, quizId: null });
-    };
-
-    const handleToggleVisibility = async (quizId, isVisible) => {
-        try {
-            const token = localStorage.getItem("token");
-            console.log(`Toggling visibility for quiz: ${quizId} to ${!isVisible}`);
-            const response = await API.post(
-                `/quiz/toggle-visibility/${quizId}`,
-                {},
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            console.log("Toggle visibility response:", response.data);
-            setPopup({ message: response.data.msg || `Quiz is now ${isVisible ? "hidden" : "visible"}`, type: "success" });
-            fetchQuizzes();
-        } catch (err) {
-            console.error("Toggle visibility error:", err.response?.data || err.message);
-            setPopup({ message: err.response?.data?.msg || "Failed to toggle visibility. Please try again.", type: "error" });
-        }
-    };
 
     const closePopup = () => {
         setPopup({ message: "", type: "success" });
     };
 
-    const closeDeleteConfirm = () => {
-        setDeleteConfirm({ show: false, quizId: null });
+    const getScoreColor = (score, total) => {
+        const percentage = total > 0 ? (score / total) * 100 : 0;
+        if (percentage >= 70) return "text-green-600";
+        if (percentage >= 40) return "text-orange-600";
+        return "text-red-600";
     };
 
-    const downloadCSV = () => {
-        const headers = ["date,subject,title,postedBy,totalQuestions,timer,visibility"];
-        const rows = groupedQuizzes.sortedDates.flatMap((date) =>
-            groupedQuizzes.grouped[date].map((quiz) => [
-                `"${date}"`,
-                `"${quiz.subject}"`,
-                `"${quiz.title}"`,
-                `"${quiz.createdBy?.email || "Unknown"}"`,
-                quiz.questions.length,
-                quiz.timer,
-                quiz.isVisible ? "Visible" : "Hidden",
-            ].join(","))
+    const groupedResults = results
+        .slice()
+        .sort((a, b) => {
+            const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+            const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+            return dateB - dateA;
+        })
+        .reduce((acc, result) => {
+            const date = result.createdAt
+                ? new Date(result.createdAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                })
+                : "Unknown Date";
+            if (!acc[date]) acc[date] = [];
+            acc[date].push(result);
+            return acc;
+        }, {});
+
+    const sortedDates = Object.keys(groupedResults).sort((a, b) => {
+        if (a === "Unknown Date") return 1;
+        if (b === "Unknown Date") return -1;
+        return new Date(b) - new Date(a);
+    });
+
+    const filteredResults = Object.entries(groupedResults).reduce((acc, [date, results]) => {
+        const filtered = results.filter(
+            (r) =>
+                r.quiz?.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                r.quiz?.title?.toLowerCase().includes(searchTerm.toLowerCase())
         );
-        const csvContent = [headers, ...rows].join("\n");
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Quizzes_All.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
+        if (filtered.length > 0) acc[date] = filtered;
+        return acc;
+    }, {});
 
     return (
-        <div className="relative p-4">
-            <Popup message={popup.message} type={popup.type} onClose={closePopup} />
-            {deleteConfirm.show && (
-                <Popup
-                    message="Are you sure you want to delete this quiz?"
-                    type="error"
-                    onClose={closeDeleteConfirm}
-                    confirmAction={confirmDelete}
-                />
-            )}
-            <h1 className="text-xl font-bold mb-4">All Quizzes</h1>
-            <div className="mb-4">
-                <button
-                    onClick={downloadCSV}
-                    className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                    disabled={groupedQuizzes.sortedDates.length === 0}
-                >
-                    Download CSV
-                </button>
-            </div>
-            {groupedQuizzes.sortedDates.length === 0 && <p>No quizzes found.</p>}
-            {groupedQuizzes.sortedDates.map((date) => (
-                groupedQuizzes.grouped[date] && (
-                    <div key={date} className="mb-6">
-                        <h3 className="text-lg font-semibold text-gray-700 mb-2">{date}</h3>
-                        <ul className="space-y-2">
-                            {groupedQuizzes.grouped[date].map((q) => (
-                                <li key={q._id} className="p-4 border rounded bg-white relative">
-                                    <div className="flex justify-between items-center">
+        <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
+            <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <Popup message={popup.message} type={popup.type} onClose={closePopup} />
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <i className="fas fa-chart-bar"></i> Your Results
+                </h2>
+                <div>
+                    <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">
+                        Search by Subject or Title
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="Search by subject or title"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                    />
+                </div>
+                {sortedDates.length === 0 && (
+                    <p className="text-gray-600 text-xs sm:text-sm">No results found.</p>
+                )}
+                {sortedDates.map((date) =>
+                    filteredResults[date] ? (
+                        <div key={date} className="space-y-3 sm:space-y-4">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-800">{date}</h3>
+                            <ul className="space-y-2 sm:space-y-3">
+                                {filteredResults[date].map((r) => (
+                                    <li
+                                        key={r._id}
+                                        className="p-3 sm:p-4 border border-gray-200 rounded-lg bg-gray-50 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4"
+                                    >
                                         <div>
-                                            <strong className="text-lg">{q.subject} - {q.title}</strong>
-                                            <p className="text-sm text-blue-500">Posted by: {q.createdBy?.email || "Unknown"}</p>
-                                            <p className="text-sm text-gray-600">
-                                                Total Questions: {q.questions.length} | Total Time: {q.timer} minutes
-                                                {role === "admin" && (
-                                                    <span> | Status: {q.isVisible ? "Visible" : "Hidden"}</span>
-                                                )}
-                                            </p>
-                                            {role === "user" && q.isVisible ? (
-                                                <Link to={`/dashboard/attempt/${q._id}`} className="text-blue-600 underline">
-                                                    Attempt Quiz
-                                                </Link>
-                                            ) : role === "admin" ? (
-                                                <div className="flex gap-2">
-                                                    <Link to={`/dashboard/attempt/${q._id}`} className="text-blue-600 underline">
-                                                        View Quiz
-                                                    </Link>
-                                                    <Link to={`/dashboard/quiz/${q._id}/report`} className="text-blue-600 underline">
-                                                        View Report
-                                                    </Link>
-                                                </div>
-                                            ) : null}
+                                            In <strong>{r.quiz?.subject || "No Subject"}</strong> -{" "}
+                                            <strong>{r.quiz?.title || "Deleted Quiz"}</strong> you scored{" "}
+                                            <span className={getScoreColor(r.score, r.total)}>
+                                                {r.score}/{r.total}
+                                            </span>
                                         </div>
-                                        {role === "admin" && (
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => handleToggleVisibility(q._id, q.isVisible)}
-                                                    className={`text-${q.isVisible ? "gray" : "green"}-500 mx-1 hover:text-${q.isVisible ? "gray" : "green"}-700`}
-                                                    title={q.isVisible ? "Hide Quiz" : "Show Quiz"}
-                                                >
-                                                    {q.isVisible ? <i className="fas fa-eye"></i> : <i className="fas fa-eye-slash"></i>}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleEdit(q._id)}
-                                                    className="text-blue-500 hover:text-blue-700"
-                                                    title="Edit Quiz"
-                                                >
-                                                    📝
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(q._id)}
-                                                    className="text-red-500 hover:text-red-700"
-                                                    title="Delete Quiz"
-                                                >
-                                                    ❌
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )
-            ))}
+                                        <span className="text-xs sm:text-sm text-gray-500">
+                                            {r.createdAt
+                                                ? new Date(r.createdAt).toLocaleTimeString("en-US", {
+                                                    hour: "2-digit",
+                                                    minute: "2-digit",
+                                                    hour12: true,
+                                                })
+                                                : "N/A"}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ) : null
+                )}
+            </div>
         </div>
     );
 }
 
-export default Home;
+export default Result;

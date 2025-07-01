@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Quiz = require("../models/Quiz");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -110,6 +111,44 @@ exports.changePassword = async (req, res) => {
         await user.save();
 
         res.json({ msg: "Password changed successfully" });
+    } catch (err) {
+        res.status(500).json({ msg: "Server error" });
+    }
+};
+
+// Get all users (for admins only)
+exports.getAllUsers = async (req, res) => {
+    try {
+        // Ensure only admins can access this endpoint
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ msg: "Access denied. Admins only." });
+        }
+
+        const users = await User.find().select('-password'); // Exclude passwords
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ msg: "Server error" });
+    }
+};
+
+exports.deleteUser = async (req, res) => {
+    try {
+        // Ensure only admins can delete users
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ msg: "Access denied. Admins only." });
+        }
+
+        const userId = req.params.id;
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ msg: "User not found" });
+
+        // If the user is an admin, delete their created quizzes
+        if (user.role === "admin") {
+            await Quiz.deleteMany({ createdBy: userId });
+        }
+
+        await User.findByIdAndDelete(userId);
+        res.json({ msg: "User deleted successfully" });
     } catch (err) {
         res.status(500).json({ msg: "Server error" });
     }

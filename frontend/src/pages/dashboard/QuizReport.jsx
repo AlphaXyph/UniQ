@@ -62,7 +62,7 @@ function QuizReport() {
 
     const getScoreColor = (score) => {
         const [marks, total] = score.split("/").map(Number);
-        const percentage = (marks / total) * 100;
+        const percentage = total > 0 ? (marks / total) * 100 : 0;
         if (percentage >= 70) return "text-green-600";
         if (percentage >= 40) return "text-orange-600";
         return "text-red-600";
@@ -76,7 +76,6 @@ function QuizReport() {
             if (sortBy === "name") {
                 valA = a.name.toLowerCase();
                 valB = b.name.toLowerCase();
-                // Secondary sort by surname for name
                 if (valA === valB) {
                     valA = a.name.split(" ")[1]?.toLowerCase() || "";
                     valB = b.name.split(" ")[1]?.toLowerCase() || "";
@@ -121,66 +120,85 @@ function QuizReport() {
     };
 
     return (
-        <div className="relative p-4">
-            <Popup message={popup.message} type={popup.type} onClose={closePopup} />
-            <h1 className="text-xl font-bold mb-4">Quiz Report</h1>
-            <div className="mb-4">
-                <strong className="text-lg">{quiz.subject} - {quiz.title}</strong>
-            </div>
-            <div className="mb-4 flex gap-4 items-center">
-                <div>
-                    <label className="mr-2">Sort by:</label>
-                    <select
-                        name="sortBy"
-                        value={sortBy}
-                        onChange={handleSortChange}
-                        className="p-2 border rounded"
-                    >
-                        <option value="name">Name</option>
-                        <option value="rollNo">Roll No</option>
-                        <option value="division">Division</option>
-                        <option value="branch">Branch</option>
-                        <option value="year">Year</option>
-                    </select>
+        <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
+            <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <Popup message={popup.message} type={popup.type} onClose={closePopup} />
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <i className="fas fa-chart-bar"></i> Quiz Report
+                </h2>
+                <div className="flex flex-col sm:flex-row items-start sm:items-end gap-2 sm:gap-4">
+                    {/* Sort By */}
+                    <div className="flex flex-col">
+                        <label className="mb-1 font-semibold text-sm sm:text-base text-gray-700">Sort by:</label>
+                        <select
+                            name="sortBy"
+                            value={sortBy}
+                            onChange={handleSortChange}
+                            className="w-40 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        >
+                            <option value="name">Name</option>
+                            <option value="rollNo">Roll No</option>
+                            <option value="division">Division</option>
+                            <option value="branch">Branch</option>
+                            <option value="year">Year</option>
+                        </select>
+                    </div>
+                    {/* Order */}
+                    <div className="flex flex-col">
+                        <label className="mb-1 font-semibold text-sm sm:text-base text-gray-700">Order:</label>
+                        <select
+                            name="order"
+                            value={order}
+                            onChange={handleSortChange}
+                            className="w-40 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        >
+                            <option value="asc">Ascending</option>
+                            <option value="desc">Descending</option>
+                        </select>
+                    </div>
+
+                    {/* Download Button */}
+                    <div className="sm:ml-auto">
+                        <button
+                            onClick={downloadCSV}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
+                            disabled={isLoading || sortedReport.length === 0}
+                        >
+                            <i className="fas fa-download"></i>
+                            <span>Download CSV</span>
+                        </button>
+                    </div>
                 </div>
-                <div>
-                    <label className="mr-2">Order:</label>
-                    <select
-                        name="order"
-                        value={order}
-                        onChange={handleSortChange}
-                        className="p-2 border rounded"
-                    >
-                        <option value="asc">Ascending</option>
-                        <option value="desc">Descending</option>
-                    </select>
-                </div>
-                <button
-                    onClick={downloadCSV}
-                    className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                    disabled={isLoading || sortedReport.length === 0}
-                >
-                    Download CSV
-                </button>
+                {isLoading ? (
+                    <p className="text-gray-600 text-xs sm:text-sm">Loading results...</p>
+                ) : sortedReport.length === 0 ? (
+                    <p className="text-gray-600 text-xs sm:text-sm">No results available for this quiz.</p>
+                ) : (
+                    <ul className="space-y-2 sm:space-y-3">
+                        {sortedReport.map((entry, index) => (
+                            <li
+                                key={index}
+                                className="p-3 sm:p-4 border border-gray-200 rounded-lg bg-gray-50 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4"
+                            >
+                                <div>
+                                    <strong>{entry.rollNo}</strong>:{" "}
+                                    <span className="group relative">
+                                        <strong>{entry.name}</strong>
+                                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs sm:text-sm rounded px-2 py-1 -top-8 left-0 z-10">
+                                            {entry.email || "No Email"}
+                                        </span>
+                                    </span>{" "}
+                                    from {entry.year}-{entry.branch}-{entry.division} took{" "}
+                                    <strong>
+                                        {entry.subject} - {entry.topic}
+                                    </strong>{" "}
+                                    and scored <strong className={getScoreColor(entry.score)}>{entry.score}</strong>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </div>
-            {isLoading ? (
-                <p>Loading results...</p>
-            ) : sortedReport.length === 0 ? (
-                <p>No results available for this quiz.</p>
-            ) : (
-                <ul className="space-y-2">
-                    {sortedReport.map((entry, index) => (
-                        <li key={index} className="p-4 border rounded bg-white">
-                            <strong>{entry.rollNo}</strong>: <span className="group relative">
-                                <strong>{entry.name}</strong>
-                                <span className="absolute hidden group-hover:block bg-gray-800 text-white text-sm rounded px-2 py-1 -top-8 left-0 z-10">
-                                    {entry.email || "No Email"}
-                                </span>
-                            </span> from {entry.year}-{entry.branch}-{entry.division} took <strong>{entry.subject} - {entry.topic}</strong> and scored <strong className={getScoreColor(entry.score)}>{entry.score}</strong>
-                        </li>
-                    ))}
-                </ul>
-            )}
         </div>
     );
 }

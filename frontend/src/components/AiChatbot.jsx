@@ -19,21 +19,18 @@ const AIChatbot = ({ onClose, importQuestions }) => {
     const [isTyping, setIsTyping] = useState(false);
     const messagesEndRef = useRef(null);
 
-    // Scroll to the bottom of messages
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    // Simulate typing delay for AI messages
     const simulateTyping = useCallback((text, callback) => {
         setIsTyping(true);
         setTimeout(() => {
             setIsTyping(false);
             callback();
-        }, 1000); // 1-second delay to mimic typing
+        }, 1000);
     }, []);
 
-    // Add AI message with typing animation
     const addAIMessage = useCallback(
         (text) => {
             simulateTyping(text, () => {
@@ -43,7 +40,6 @@ const AIChatbot = ({ onClose, importQuestions }) => {
         [simulateTyping]
     );
 
-    // Check and validate existing API key on mount
     useEffect(() => {
         if (step === "checkApiKey") {
             if (apiKey) {
@@ -76,7 +72,6 @@ Do you have an API key, or need help with generating one?
         }
     }, [step, apiKey, addAIMessage]);
 
-    // Handle user choice for API key
     const handleApiKeyChoice = (hasKey) => {
         setMessages((prev) => [...prev, { sender: "user", text: hasKey ? "Yes, I have a key." : "No, please help me get one." }]);
         if (hasKey) {
@@ -89,12 +84,11 @@ Do you have an API key, or need help with generating one?
         }
     };
 
-    // Validate API key
     const validateApiKey = async (key) => {
         try {
             const genAI = new GoogleGenerativeAI(key);
             const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-            await model.generateContent("Test prompt"); // Simple test
+            await model.generateContent("Test prompt");
             return true;
         } catch (err) {
             console.error("API key validation error:", err.message);
@@ -102,7 +96,6 @@ Do you have an API key, or need help with generating one?
         }
     };
 
-    // Handle API key input
     const handleApiKeyInput = async () => {
         if (!currentInput.trim()) {
             setPopup({ message: "Please enter an API key.", type: "error" });
@@ -122,7 +115,6 @@ Do you have an API key, or need help with generating one?
         setCurrentInput("");
     };
 
-    // Validate inputs for other steps
     const validateInputs = () => {
         if (step === "subject" && !currentInput.trim()) return "Subject is required.";
         if (step === "topic" && !currentInput.trim()) return "Topic is required.";
@@ -135,7 +127,6 @@ Do you have an API key, or need help with generating one?
         return "";
     };
 
-    // Handle other inputs
     const handleSendMessage = () => {
         if (!currentInput.trim()) {
             if (step === "additionalDetails") {
@@ -276,11 +267,19 @@ Example:
 
     return (
         <>
-            <div className="fixed bottom-16 right-4 sm:w-96 w-11/12 max-h-[80vh] overflow-y-auto bg-gray-50 rounded-lg shadow-md border border-gray-200 p-4 space-y-4 z-50">
+            <div className="fixed bottom-16 right-4 sm:w-96 w-11/12 max-h-[80vh] bg-white rounded-lg shadow-md border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-6 z-50 overflow-y-auto">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} />
                 <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-gray-800">AI Quiz Generator</h3>
-                    <button onClick={onClose} className="text-gray-600 hover:text-gray-800">✕</button>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <i className="fas fa-robot"></i> AI Quiz Generator
+                    </h3>
+                    <button
+                        onClick={onClose}
+                        className="text-gray-600 hover:text-gray-800 text-sm sm:text-base"
+                        aria-label="Close chatbot"
+                    >
+                        <i className="fas fa-times"></i>
+                    </button>
                 </div>
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                     {messages.map((msg, index) => (
@@ -289,9 +288,9 @@ Example:
                             className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
                         >
                             <div
-                                className={`max-w-[80%] p-3 rounded-lg ${msg.sender === "user"
-                                    ? "bg-blue-600 text-white"
-                                    : "bg-gray-200 text-gray-800"
+                                className={`max-w-[80%] p-2 sm:p-3 rounded-lg text-xs sm:text-sm ${msg.sender === "user"
+                                    ? "bg-blue-500 text-white"
+                                    : "bg-gray-100 text-gray-800"
                                     }`}
                             >
                                 {msg.text}
@@ -300,7 +299,7 @@ Example:
                     ))}
                     {isTyping && (
                         <div className="flex justify-start">
-                            <div className="max-w-[80%] p-3 rounded-lg bg-gray-200 text-gray-800">
+                            <div className="max-w-[80%] p-2 sm:p-3 rounded-lg bg-gray-100 text-gray-800 text-xs sm:text-sm">
                                 Typing...
                             </div>
                         </div>
@@ -308,41 +307,41 @@ Example:
                     <div ref={messagesEndRef} />
                 </div>
                 {step === "apiKeyPrompt" && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                         <button
                             onClick={() => handleApiKeyChoice(true)}
-                            className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700"
+                            className="w-full sm:w-auto p-2 sm:p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-xs sm:text-sm"
                         >
                             Yes, I have a key
                         </button>
                         <button
                             onClick={() => handleApiKeyChoice(false)}
-                            className="bg-gray-500 text-white p-2 rounded-lg hover:bg-gray-600"
+                            className="w-full sm:w-auto p-2 sm:p-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-xs sm:text-sm"
                         >
                             No, help me get one
                         </button>
                     </div>
                 )}
                 {step === "apiKeyInput" && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                         <input
                             type="text"
                             placeholder="Enter your Gemini API key"
-                            className="w-full border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                             value={currentInput}
                             onChange={(e) => setCurrentInput(e.target.value)}
                             onKeyPress={(e) => e.key === "Enter" && handleApiKeyInput()}
                         />
                         <button
                             onClick={handleApiKeyInput}
-                            className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700"
+                            className="w-full sm:w-auto p-2 sm:p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-xs sm:text-sm"
                         >
-                            ➤
+                            <i className="fas fa-arrow-right"></i>
                         </button>
                     </div>
                 )}
                 {step !== "apiKeyPrompt" && step !== "apiKeyInput" && step !== "generate" && step !== "checkApiKey" && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                         <input
                             type={step === "numQuestions" ? "number" : "text"}
                             placeholder={
@@ -356,58 +355,59 @@ Example:
                                                 ? "Difficulty (B, E, I, M, A, H)"
                                                 : "Any additional details (optional)"
                             }
-                            className="w-full border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                             value={currentInput}
                             onChange={(e) => setCurrentInput(e.target.value)}
                             onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
                         />
                         <button
                             onClick={handleSendMessage}
-                            className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700"
+                            className="w-full sm:w-auto p-2 sm:p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-xs sm:text-sm"
                         >
-                            ➤
+                            <i className="fas fa-arrow-right"></i>
                         </button>
                     </div>
                 )}
                 {(step === "generate" || step === "additionalDetails") && (
                     <button
                         onClick={generateQuestions}
-                        className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700"
+                        className="w-full p-2 sm:p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-xs sm:text-sm"
                         disabled={isLoading}
                     >
                         {isLoading ? "Generating..." : "Generate Questions"}
                     </button>
                 )}
                 {questions.length > 0 && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                         <button
                             onClick={downloadCSV}
-                            className="w-full bg-green-600 text-white p-2 rounded-lg hover:bg-green-700"
+                            className="w-full sm:w-auto p-2 sm:p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 text-xs sm:text-sm"
                         >
-                            Download as CSV
+                            <i className="fas fa-download"></i> Download as CSV
                         </button>
                         <button
                             onClick={handleImport}
-                            className="w-full bg-yellow-600 text-white p-2 rounded-lg hover:bg-yellow-700"
+                            className="w-full sm:w-auto p-2 sm:p-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-xs sm:text-sm"
                         >
-                            Import to Form
+                            <i className="fas fa-file-import"></i> Import to Form
                         </button>
                     </div>
                 )}
             </div>
             {showInstructions && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="w-96 bg-gray-100 rounded-lg shadow-md border border-gray-200 p-4">
-                        <div className="flex justify-between items-center mb-2">
-                            <h3 className="text-lg font-bold text-gray-800">Get Your Gemini API Key</h3>
+                    <div className="w-full max-w-md bg-white rounded-lg shadow-md border border-gray-200 p-4 sm:p-6">
+                        <div className="flex justify-between items-center mb-3 sm:mb-4">
+                            <h3 className="text-lg sm:text-xl font-bold text-gray-800">Get Your Gemini API Key</h3>
                             <button
                                 onClick={() => setShowInstructions(false)}
-                                className="text-gray-600 hover:text-gray-800"
+                                className="text-gray-600 hover:text-gray-800 text-sm sm:text-base"
+                                aria-label="Close instructions"
                             >
-                                ✕
+                                <i className="fas fa-times"></i>
                             </button>
                         </div>
-                        <div className="text-sm text-gray-600 space-y-2">
+                        <div className="text-xs sm:text-sm text-gray-600 space-y-2 sm:space-y-3">
                             <p>To get your Gemini API key:</p>
                             <ol className="list-decimal ml-4">
                                 <li>
@@ -416,7 +416,7 @@ Example:
                                         href="https://aistudio.google.com"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-blue-600 underline"
+                                        className="text-blue-500 hover:underline"
                                     >
                                         Google AI Studio
                                     </a>

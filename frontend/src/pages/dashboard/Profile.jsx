@@ -152,17 +152,37 @@ function Profile() {
     };
 
     const handlePasswordChange = async () => {
-        if (newPassword !== confirmNewPassword) {
-            setPopup({ message: "New passwords do not match", type: "error" });
-            return;
-        }
         if (!currentPassword) {
             setPopup({ message: "Please enter your current password", type: "error" });
             return;
         }
+        const trimmedNewPassword = newPassword.trim();
+        if (!trimmedNewPassword) {
+            setPopup({ message: "New Password is required", type: "error" });
+            return;
+        }
+        if (trimmedNewPassword.length < 8) {
+            setPopup({ message: "New Password must be at least 8 characters long", type: "error" });
+            return;
+        }
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        if (!passwordRegex.test(trimmedNewPassword)) {
+            setPopup({ message: "New Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character", type: "error" });
+            return;
+        }
+        const trimmedConfirmPassword = confirmNewPassword.trim();
+        if (!trimmedConfirmPassword) {
+            setPopup({ message: "Confirm New Password is required", type: "error" });
+            return;
+        }
+        if (trimmedConfirmPassword !== trimmedNewPassword) {
+            setPopup({ message: "New passwords do not match", type: "error" });
+            return;
+        }
+
         try {
             const token = localStorage.getItem("token");
-            await API.post("/auth/change-password", { currentPassword, newPassword }, {
+            await API.post("/auth/change-password", { currentPassword, newPassword: trimmedNewPassword }, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setPopup({ message: "Password changed successfully!", type: "success" });
@@ -178,199 +198,198 @@ function Profile() {
         setPopup({ message: "", type: "success" });
     };
 
-    if (!user) return <div>Loading...</div>;
+    if (!user) return <div className="min-h-screen bg-gray-100 p-4 sm:p-6"><p className="text-center text-gray-600 text-xs sm:text-sm">Loading...</p></div>;
 
     const fullName = `${user.name || ""} ${user.surname || ""}`.trim();
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-            <Popup message={popup.message} type={popup.type} onClose={closePopup} />
-            <div className="w-full max-w-4xl bg-white shadow-md rounded-lg overflow-hidden">
-                <div className="p-6">
-                    <div className="mb-6">
-                        <h2 className="text-2xl font-bold text-center mb-6">Profile</h2>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
-                            <div className="col-span-full">
-                                <label className="block text-sm font-medium text-gray-700">Email</label>
+        <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
+            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <Popup message={popup.message} type={popup.type} onClose={closePopup} />
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <i className="fas fa-user"></i> Profile
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="col-span-full">
+                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Email</label>
+                        <input
+                            type="email"
+                            value={user.email || ""}
+                            readOnly
+                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg bg-gray-100 text-xs sm:text-sm"
+                        />
+                    </div>
+                    <div className="col-span-full">
+                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Full Name</label>
+                        {isEditing ? (
+                            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                                 <input
-                                    type="email"
-                                    value={user.email || ""}
-                                    readOnly
-                                    className="w-full p-2 border rounded focus:outline-none bg-gray-100"
+                                    type="text"
+                                    name="name"
+                                    value={editedUser.name || ""}
+                                    onChange={handleChange}
+                                    maxLength={20}
+                                    placeholder="Name (max 20 chars)"
+                                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                />
+                                <input
+                                    type="text"
+                                    name="surname"
+                                    value={editedUser.surname || ""}
+                                    onChange={handleChange}
+                                    maxLength={20}
+                                    placeholder="Surname (max 20 chars)"
+                                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                                 />
                             </div>
-                            <div className="col-span-full">
-                                <label className="block text-sm font-medium text-gray-700">Full Name</label>
-                                {isEditing ? (
-                                    <div className="flex gap-4">
-                                        <input
-                                            type="text"
-                                            name="name"
-                                            value={editedUser.name || ""}
-                                            onChange={handleChange}
-                                            maxLength={20}
-                                            placeholder="Name (max 20 chars)"
-                                            className="w-1/2 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                        <input
-                                            type="text"
-                                            name="surname"
-                                            value={editedUser.surname || ""}
-                                            onChange={handleChange}
-                                            maxLength={20}
-                                            placeholder="Surname (max 20 chars)"
-                                            className="w-1/2 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                ) : (
-                                    <input
-                                        type="text"
-                                        value={fullName}
-                                        readOnly
-                                        className="w-full p-2 border rounded focus:outline-none bg-gray-100"
-                                    />
-                                )}
+                        ) : (
+                            <input
+                                type="text"
+                                value={fullName}
+                                readOnly
+                                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg bg-gray-100 text-xs sm:text-sm"
+                            />
+                        )}
+                    </div>
+                    {user.role === "user" && (
+                        <>
+                            <div>
+                                <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Branch</label>
+                                <input
+                                    type="text"
+                                    name="branch"
+                                    value={editedUser.branch || ""}
+                                    onChange={handleChange}
+                                    maxLength={4}
+                                    readOnly={!isEditing}
+                                    className={`w-full p-2 sm:p-3 border border-gray-300 rounded-lg text-xs sm:text-sm ${!isEditing ? "bg-gray-100" : "focus:outline-none focus:ring-2 focus:ring-blue-500"}`}
+                                />
                             </div>
-                            {user.role === "user" && (
-                                <>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Branch</label>
-                                        <input
-                                            type="text"
-                                            name="branch"
-                                            value={editedUser.branch || ""}
-                                            onChange={handleChange}
-                                            maxLength={4}
-                                            readOnly={!isEditing}
-                                            className={`w-full p-2 border rounded focus:outline-none ${!isEditing ? "bg-gray-100" : "focus:ring-2 focus:ring-blue-500"}`}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Division</label>
-                                        <input
-                                            type="text"
-                                            name="division"
-                                            value={editedUser.division || ""}
-                                            onChange={handleChange}
-                                            maxLength={2}
-                                            readOnly={!isEditing}
-                                            className={`w-full p-2 border rounded focus:outline-none ${!isEditing ? "bg-gray-100" : "focus:ring-2 focus:ring-blue-500"}`}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Roll Number</label>
-                                        <input
-                                            type="number"
-                                            name="rollNo"
-                                            value={editedUser.rollNo || ""}
-                                            onChange={handleChange}
-                                            max={999}
-                                            readOnly={!isEditing}
-                                            className={`w-full p-2 border rounded focus:outline-none ${!isEditing ? "bg-gray-100" : "focus:ring-2 focus:ring-blue-500"}`}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Year</label>
-                                        <select
-                                            name="year"
-                                            value={editedUser.year || ""}
-                                            onChange={handleChange}
-                                            disabled={!isEditing}
-                                            className={`w-full p-2 border rounded focus:outline-none ${!isEditing ? "bg-gray-100" : "focus:ring-2 focus:ring-blue-500"}`}
-                                        >
-                                            <option value="">Select Year</option>
-                                            <option value="FY">FY</option>
-                                            <option value="SY">SY</option>
-                                            <option value="TY">TY</option>
-                                            <option value="FOURTH">FOURTH</option>
-                                        </select>
-                                    </div>
-                                </>
-                            )}
-                            <button
-                                onClick={handleEditToggle}
-                                className="col-span-full p-2 text-blue-500 hover:text-blue-700"
-                            >
-                                <i className="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            {isEditing && (
-                                <button
-                                    onClick={handleSave}
-                                    className="col-span-full w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+                            <div>
+                                <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Division</label>
+                                <input
+                                    type="text"
+                                    name="division"
+                                    value={editedUser.division || ""}
+                                    onChange={handleChange}
+                                    maxLength={2}
+                                    readOnly={!isEditing}
+                                    className={`w-full p-2 sm:p-3 border border-gray-300 rounded-lg text-xs sm:text-sm ${!isEditing ? "bg-gray-100" : "focus:outline-none focus:ring-2 focus:ring-blue-500"}`}
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Roll Number</label>
+                                <input
+                                    type="number"
+                                    name="rollNo"
+                                    value={editedUser.rollNo || ""}
+                                    onChange={handleChange}
+                                    max={999}
+                                    readOnly={!isEditing}
+                                    className={`w-full p-2 sm:p-3 border border-gray-300 rounded-lg text-xs sm:text-sm ${!isEditing ? "bg-gray-100" : "focus:outline-none focus:ring-2 focus:ring-blue-500"}`}
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Year</label>
+                                <select
+                                    name="year"
+                                    value={editedUser.year || ""}
+                                    onChange={handleChange}
+                                    disabled={!isEditing}
+                                    className={`w-full p-2 sm:p-3 border border-gray-300 rounded-lg text-xs sm:text-sm ${!isEditing ? "bg-gray-100" : "focus:outline-none focus:ring-2 focus:ring-blue-500"}`}
                                 >
-                                    Save Changes
-                                </button>
-                            )}
-                        </div>
+                                    <option value="">Select Year</option>
+                                    <option value="FY">FY</option>
+                                    <option value="SY">SY</option>
+                                    <option value="TY">TY</option>
+                                    <option value="FOURTH">FOURTH</option>
+                                </select>
+                            </div>
+                        </>
+                    )}
+                    <div className="col-span-full flex flex-col sm:flex-row gap-3 sm:gap-4">
+                        <button
+                            onClick={handleEditToggle}
+                            className="w-full sm:w-auto p-2 sm:p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-xs sm:text-sm"
+                        >
+                            <i className="fas fa-pen-to-square"></i> {isEditing ? "Cancel" : "Edit Profile"}
+                        </button>
+                        {isEditing && (
+                            <button
+                                onClick={handleSave}
+                                className="w-full sm:w-auto p-2 sm:p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 text-xs sm:text-sm"
+                            >
+                                Save Changes
+                            </button>
+                        )}
                     </div>
                 </div>
-            </div>
-            <div className="w-full max-w-4xl mt-6 bg-white shadow-md rounded-lg overflow-hidden">
-                <div className="p-6">
-                    <div>
-                        <h3 className="text-xl font-semibold mb-4 text-center">Change Password</h3>
-                        <div className="flex flex-col items-center space-y-4">
-                            <div className="relative w-full max-w-sm">
-                                <input
-                                    type={showCurrentPassword ? "text" : "password"}
-                                    placeholder="Current Password (required)"
-                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    value={currentPassword}
-                                    onChange={(e) => setCurrentPassword(e.target.value)}
-                                    autoComplete="new-password"
-                                    name="current-password-unique-123"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                >
-                                    {showCurrentPassword ? "Hide" : "Show"}
-                                </button>
-                            </div>
-                            <div className="relative w-full max-w-sm">
-                                <input
-                                    type={showNewPassword ? "text" : "password"}
-                                    placeholder="New Password"
-                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    autoComplete="new-password"
-                                    name="new-password-unique-123"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowNewPassword(!showNewPassword)}
-                                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                >
-                                    {showNewPassword ? "Hide" : "Show"}
-                                </button>
-                            </div>
-                            <div className="relative w-full max-w-sm">
-                                <input
-                                    type={showNewPassword ? "text" : "password"}
-                                    placeholder="Confirm New Password"
-                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    value={confirmNewPassword}
-                                    onChange={(e) => setConfirmNewPassword(e.target.value)}
-                                    autoComplete="new-password"
-                                    name="confirm-password-unique-123"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowNewPassword(!showNewPassword)}
-                                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                >
-                                    {showNewPassword ? "Hide" : "Show"}
-                                </button>
-                            </div>
+                <div className="border-t border-gray-200 pt-4 sm:pt-6">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Change Password</h3>
+                    <div className="flex flex-col gap-3 sm:gap-4">
+                        <div className="relative">
+                            <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Current Password</label>
+                            <input
+                                type={showCurrentPassword ? "text" : "password"}
+                                placeholder="Current Password (required)"
+                                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                value={currentPassword}
+                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                autoComplete="new-password"
+                                name="current-password-unique-123"
+                            />
                             <button
-                                onClick={handlePasswordChange}
-                                className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 px-6 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition duration-300 mt-4"
+                                type="button"
+                                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                className="absolute right-2 top-2/3 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs sm:text-sm"
                             >
-                                Change Password
+                                <i className={showCurrentPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
                             </button>
                         </div>
+                        <div className="relative">
+                            <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">New Password</label>
+                            <input
+                                type={showNewPassword ? "text" : "password"}
+                                placeholder="New Password"
+                                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                autoComplete="new-password"
+                                name="new-password-unique-123"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowNewPassword(!showNewPassword)}
+                                className="absolute right-2 top-2/3 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs sm:text-sm"
+                            >
+                                <i className={showNewPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
+                            </button>
+                        </div>
+                        <div className="relative">
+                            <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Confirm New Password</label>
+                            <input
+                                type={showNewPassword ? "text" : "password"}
+                                placeholder="Confirm New Password"
+                                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                value={confirmNewPassword}
+                                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                                autoComplete="new-password"
+                                name="confirm-password-unique-123"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowNewPassword(!showNewPassword)}
+                                className="absolute right-2 top-2/3 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs sm:text-sm"
+                            >
+                                <i className={showNewPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
+                            </button>
+                        </div>
+                        <button
+                            onClick={handlePasswordChange}
+                            className="w-full sm:w-auto p-2 sm:p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 text-xs sm:text-sm"
+                        >
+                            Change Password
+                        </button>
                     </div>
                 </div>
             </div>
