@@ -12,6 +12,7 @@ function AttemptQuiz({ setIsQuizActive }) {
     const [isStarted, setIsStarted] = useState(false);
     const [timeLeft, setTimeLeft] = useState(null);
     const [violationCount, setViolationCount] = useState(0);
+    const [isSubmitted, setIsSubmitted] = useState(false); // New state
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem("user"));
     const role = user?.role || "user";
@@ -53,6 +54,9 @@ function AttemptQuiz({ setIsQuizActive }) {
 
     const handleSubmit = useCallback(
         async (isAutoSubmit = false) => {
+            if (isSubmitted) return;
+            setIsSubmitted(true);
+
             if (!isAutoSubmit) {
                 const unansweredIndex = answers.findIndex((ans) => ans === null);
                 if (unansweredIndex !== -1) {
@@ -61,6 +65,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                         type: "error",
                         confirmAction: null,
                     });
+                    setIsSubmitted(false);
                     return;
                 }
             }
@@ -79,9 +84,10 @@ function AttemptQuiz({ setIsQuizActive }) {
                 setTimeout(() => navigate("/dashboard/result"), 2000);
             } catch (err) {
                 setPopup({ message: err.response?.data?.msg || "Submission failed", type: "error", confirmAction: null });
+                setIsSubmitted(false);
             }
         },
-        [quizId, answers, navigate, setIsQuizActive, originalIndices, role]
+        [quizId, answers, navigate, setIsQuizActive, originalIndices, role, isSubmitted]
     );
 
     const enforceFullscreen = useCallback(() => {
@@ -103,6 +109,7 @@ function AttemptQuiz({ setIsQuizActive }) {
             setIsQuizActive(true);
 
             const handleViolation = (type) => {
+                if (isSubmitted) return;
                 if (violationCount < MAX_VIOLATIONS) {
                     setViolationCount((prev) => prev + 1);
                     setPopup({
@@ -142,6 +149,19 @@ function AttemptQuiz({ setIsQuizActive }) {
                 }
             };
 
+            const disableCopyPaste = (e) => {
+                e.preventDefault();
+                setPopup({
+                    message: "Copying or pasting is not allowed during the quiz.",
+                    type: "error",
+                    confirmAction: null,
+                });
+            };
+
+            document.body.style.userSelect = "none";
+            document.body.style.webkitUserSelect = "none";
+            document.body.style.msUserSelect = "none";
+
             document.addEventListener("fullscreenchange", fullscreenChange);
             document.addEventListener("webkitfullscreenchange", fullscreenChange);
             document.addEventListener("msfullscreenchange", fullscreenChange);
@@ -149,10 +169,16 @@ function AttemptQuiz({ setIsQuizActive }) {
             window.addEventListener("blur", handleBlur);
             window.addEventListener("focus", handleFocus);
             document.addEventListener("keydown", handleKeyDown);
+            document.addEventListener("copy", disableCopyPaste);
+            document.addEventListener("cut", disableCopyPaste);
+            document.addEventListener("contextmenu", disableCopyPaste);
 
             const interval = setInterval(enforceFullscreen, 100);
 
             return () => {
+                document.body.style.userSelect = "";
+                document.body.style.webkitUserSelect = "";
+                document.body.style.msUserSelect = "";
                 document.removeEventListener("fullscreenchange", fullscreenChange);
                 document.removeEventListener("webkitfullscreenchange", fullscreenChange);
                 document.removeEventListener("msfullscreenchange", fullscreenChange);
@@ -160,11 +186,14 @@ function AttemptQuiz({ setIsQuizActive }) {
                 window.removeEventListener("blur", handleBlur);
                 window.removeEventListener("focus", handleFocus);
                 document.removeEventListener("keydown", handleKeyDown);
+                document.removeEventListener("copy", disableCopyPaste);
+                document.removeEventListener("cut", disableCopyPaste);
+                document.removeEventListener("contextmenu", disableCopyPaste);
                 clearInterval(interval);
                 setIsQuizActive(false);
             };
         }
-    }, [isStarted, role, violationCount, enforceFullscreen, handleSubmit, setIsQuizActive]);
+    }, [isStarted, role, violationCount, enforceFullscreen, handleSubmit, setIsQuizActive, isSubmitted]);
 
     useEffect(() => {
         if (role === "user" && isStarted && timeLeft > 0) {
@@ -227,13 +256,17 @@ function AttemptQuiz({ setIsQuizActive }) {
                     <h2 className="text-lg sm:text-xl font-bold text-gray-800">{quiz.title}</h2>
                     <p className="text-sm sm:text-base text-gray-600">Subject: {quiz.subject}</p>
                     <div className="p-4 sm:p-6 border border-gray-200 rounded-lg bg-gray-50 shadow-sm">
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3">Instructions</h3>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3">Quiz Instructions</h3>
+                        <p className="text-xs sm:text-sm text-gray-600 mb-4">
+                            Please read the following instructions carefully before starting the quiz to ensure a fair and smooth experience.
+                        </p>
                         <ul className="list-disc pl-5 space-y-2 text-xs sm:text-sm text-gray-600">
-                            <li>This quiz must be completed in {quiz.timer} minute{quiz.timer !== 1 ? "s" : ""}.</li>
-                            <li>Total Questions: {quiz.questions.length}</li>
-                            <li>Once submitted, you cannot change your answers.</li>
-                            <li>Stay in fullscreen mode and on this tab at all times.</li>
-                            <li>{MAX_VIOLATIONS} attempts allowed before auto-submission.</li>
+                            <li><strong>Time Limit</strong>: You have {quiz.timer} minute{quiz.timer !== 1 ? "s" : ""} to complete the quiz. The timer starts as soon as you click "Start Quiz."</li>
+                            <li><strong>Questions</strong>: The quiz contains {quiz.questions.length} question{quiz.questions.length !== 1 ? "s" : ""}. All questions must be answered before submission.</li>
+                            <li><strong>Submission</strong>: Once you submit the quiz, you cannot change your answers. Ensure all questions are answered before submitting.</li>
+                            <li><strong>Fullscreen Mode</strong>: The quiz must be taken in fullscreen mode. Exiting fullscreen or switching tabs will be considered a violation.</li>
+                            <li><strong>Violation Policy</strong>: You are allowed {MAX_VIOLATIONS} violations (e.g., exiting fullscreen or switching tabs). Exceeding this will result in automatic submission.</li>
+                            <li><strong>Technical Requirements</strong>: Ensure a stable internet connection and avoid refreshing the page to prevent quiz interruptions.</li>
                         </ul>
                         <button
                             onClick={() => setIsStarted(true)}

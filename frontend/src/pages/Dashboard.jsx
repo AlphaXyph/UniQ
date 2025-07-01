@@ -19,7 +19,7 @@ function Dashboard() {
     const user = JSON.parse(localStorage.getItem("user")) || {};
     const role = user?.role || "user";
     const name = user?.name || "User";
-    const surname = user?.surname || "Surname";
+    const surname = user?.surname || "";
     const location = useLocation();
 
     const handleLogout = () => {
@@ -36,18 +36,24 @@ function Dashboard() {
     const isActive = (path) => location.pathname === path;
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col sm:flex-row">
+        <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row">
             <Popup message={popup.message} type={popup.type} onClose={closePopup} />
             {/* Mobile Top Bar */}
             {!isQuizActive && (
-                <header className="sm:hidden bg-gray-800 text-white px-4 py-2 flex justify-between items-center shadow-md">
-                    <div className="flex items-center gap-2">
-                        <Link to="/dashboard/profile" className="relative text-xl text-green-400">
+                <header className="md:hidden bg-gray-800 text-white px-4 py-3 flex justify-between items-center shadow-md fixed top-0 left-0 right-0 z-20">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <Link
+                            to="/dashboard/profile"
+                            className="relative text-green-400 text-xl w-10 h-10 flex items-center justify-center flex-shrink-0"
+                        >
                             <i className="fa-solid fa-circle-user"></i>
-                            <div className="absolute inset-[-4px] rounded-full border-2 border-green-400"></div>
+                            <div className="absolute inset-0.5 rounded-full border-2 border-green-400 pointer-events-none"></div>
                         </Link>
-                        <div className="flex-1 overflow-hidden">
-                            <h2 className="text-[clamp(0.875rem,2.5vw,1rem)] font-semibold whitespace-normal break-words" title={name}>
+                        <div className="flex-1 min-w-0">
+                            <h2
+                                className="text-sm font-semibold truncate"
+                                title={`${name} ${surname}`}
+                            >
                                 {name} {surname}
                             </h2>
                             <span className="text-xs text-green-200">Role: {role}</span>
@@ -55,7 +61,7 @@ function Dashboard() {
                     </div>
                     <button
                         onClick={() => setMenuOpen(!menuOpen)}
-                        className="text-white text-xl focus:outline-none"
+                        className="text-white text-xl focus:outline-none flex-shrink-0"
                         aria-label={menuOpen ? "Close menu" : "Open menu"}
                     >
                         {menuOpen ? "✕" : "☰"}
@@ -66,11 +72,13 @@ function Dashboard() {
             {/* Mobile Dropdown Menu */}
             {!isQuizActive && (
                 <nav
-                    className={`${menuOpen ? "flex" : "hidden"} sm:hidden bg-gray-800 text-white p-3 flex-col gap-2 shadow-md z-10`}
+                    className={`${menuOpen ? "block" : "hidden"
+                        } md:hidden bg-gray-800 text-white px-4 pt-16 pb-4 flex-col gap-3 shadow-md fixed top-0 left-0 right-0 z-10 overflow-y-auto max-h-screen`}
                 >
                     <Link
                         to="/dashboard"
-                        className={`px-3 py-2 rounded-lg ${isActive("/dashboard") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 flex items-center gap-2 text-sm`}
+                        className={`px-3 py-2 rounded-lg text-sm ${isActive("/dashboard") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"
+                            } transition-colors duration-200 flex items-center gap-3 w-full`}
                         onClick={() => setMenuOpen(false)}
                     >
                         <i className="fa-solid fa-house w-5 text-center"></i> Home
@@ -79,21 +87,30 @@ function Dashboard() {
                         <>
                             <Link
                                 to="/dashboard/create"
-                                className={`px-3 py-2 rounded-lg ${isActive("/dashboard/create") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 flex items-center gap-2 text-sm`}
+                                className={`px-3 py-2 rounded-lg text-sm ${isActive("/dashboard/create")
+                                    ? "bg-gray-900 text-green-400"
+                                    : "hover:bg-gray-600 hover:text-white"
+                                    } transition-colors duration-200 flex items-center gap-3 w-full`}
                                 onClick={() => setMenuOpen(false)}
                             >
                                 <i className="fa-solid fa-plus-square w-5 text-center"></i> Create Quiz
                             </Link>
                             <Link
                                 to="/dashboard/reports"
-                                className={`px-3 py-2 rounded-lg ${isActive("/dashboard/reports") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 flex items-center gap-2 text-sm`}
+                                className={`px-3 py-2 rounded-lg text-sm ${isActive("/dashboard/reports")
+                                    ? "bg-gray-900 text-green-400"
+                                    : "hover:bg-gray-600 hover:text-white"
+                                    } transition-colors duration-200 flex items-center gap-3 w-full`}
                                 onClick={() => setMenuOpen(false)}
                             >
                                 <i className="fa-solid fa-chart-simple w-5 text-center"></i> Reports
                             </Link>
                             <Link
                                 to="/dashboard/users"
-                                className={`px-3 py-2 rounded-lg ${isActive("/dashboard/users") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 flex items-center gap-2 text-sm`}
+                                className={`px-3 py-2 rounded-lg text-sm ${isActive("/dashboard/users")
+                                    ? "bg-gray-900 text-green-400"
+                                    : "hover:bg-gray-600 hover:text-white"
+                                    } transition-colors duration-200 flex items-center gap-3 w-full`}
                                 onClick={() => setMenuOpen(false)}
                             >
                                 <i className="fa-solid fa-users-cog w-5 text-center"></i> User Management
@@ -102,7 +119,10 @@ function Dashboard() {
                     ) : (
                         <Link
                             to="/dashboard/result"
-                            className={`px-3 py-2 rounded-lg ${isActive("/dashboard/result") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 flex items-center gap-2 text-sm`}
+                            className={`px-3 py-2 rounded-lg text-sm ${isActive("/dashboard/result")
+                                ? "bg-gray-900 text-green-400"
+                                : "hover:bg-gray-600 hover:text-white"
+                                } transition-colors duration-200 flex items-center gap-3 w-full`}
                             onClick={() => setMenuOpen(false)}
                         >
                             <i className="fa-solid fa-chart-simple w-5 text-center"></i> Result
@@ -110,7 +130,7 @@ function Dashboard() {
                     )}
                     <button
                         onClick={handleLogout}
-                        className="px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors duration-200 flex items-center gap-2"
+                        className="px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors duration-200 flex items-center gap-3 w-full"
                     >
                         <i className="fa-solid fa-right-from-bracket w-5 text-center"></i> Logout
                     </button>
@@ -119,23 +139,30 @@ function Dashboard() {
 
             {/* Desktop Sidebar */}
             {!isQuizActive && (
-                <aside className="hidden sm:flex w-56 bg-gray-800 text-white flex-col p-4 sticky top-0 h-screen shadow-lg">
-                    <div className="flex flex-col items-center mb-4">
-                        <Link to="/dashboard/profile" className="relative text-2xl text-green-400 mb-2">
+                <aside className="hidden md:flex w-48 lg:w-64 bg-gray-800 text-white flex-col p-4 fixed top-0 left-0 h-screen shadow-lg z-10">
+                    <div className="flex flex-col items-center mb-6">
+                        <Link
+                            to="/dashboard/profile"
+                            className="relative w-12 h-12 text-2xl text-white mb-3 flex items-center justify-center"
+                        >
                             <i className="fa-solid fa-circle-user"></i>
-                            <div className="absolute inset-[-4px] rounded-full border-2 border-green-400"></div>
+                            <div className="absolute inset-1 rounded-full border-2 border-green-300 pointer-events-none"></div>
                         </Link>
-                        <div className="text-center overflow-hidden">
-                            <h2 className="text-[clamp(1rem,2vw,1.125rem)] font-semibold whitespace-normal break-words" title={name}>
+                        <div className="text-center w-full">
+                            <h2
+                                className="text-base font-semibold truncate"
+                                title={`${name} ${surname}`}
+                            >
                                 {name} {surname}
                             </h2>
-                            <p className="text-xs text-green-200">Role: {role}</p>
+                            <p className="text-sm text-green-200">Role: {role}</p>
                         </div>
                     </div>
-                    <nav className="flex flex-col justify-center items-center gap-2 flex-grow">
+                    <nav className="flex flex-col justify-center items-center gap-3 flex-grow w-full">
                         <Link
                             to="/dashboard"
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg w-full ${isActive("/dashboard") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 text-sm`}
+                            className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm ${isActive("/dashboard") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"
+                                } transition-colors duration-200`}
                         >
                             <i className="fa-solid fa-house w-5 text-center"></i> Home
                         </Link>
@@ -143,19 +170,28 @@ function Dashboard() {
                             <>
                                 <Link
                                     to="/dashboard/create"
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg w-full ${isActive("/dashboard/create") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 text-sm`}
+                                    className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm ${isActive("/dashboard/create")
+                                        ? "bg-gray-900 text-green-400"
+                                        : "hover:bg-gray-600 hover:text-white"
+                                        } transition-colors duration-200`}
                                 >
-                                    <i className="fa-solid fa-hexagon-nodes w-5 text-center"></i> Create Quiz
+                                    <i className="fa-solid fa-plus-square w-5 text-center"></i> Create Quiz
                                 </Link>
                                 <Link
                                     to="/dashboard/reports"
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg w-full ${isActive("/dashboard/reports") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 text-sm`}
+                                    className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm ${isActive("/dashboard/reports")
+                                        ? "bg-gray-900 text-green-400"
+                                        : "hover:bg-gray-600 hover:text-white"
+                                        } transition-colors duration-200`}
                                 >
                                     <i className="fa-solid fa-chart-simple w-5 text-center"></i> Reports
                                 </Link>
                                 <Link
                                     to="/dashboard/users"
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg w-full ${isActive("/dashboard/users") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 text-sm`}
+                                    className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm ${isActive("/dashboard/users")
+                                        ? "bg-gray-900 text-green-400"
+                                        : "hover:bg-gray-600 hover:text-white"
+                                        } transition-colors duration-200`}
                                 >
                                     <i className="fa-solid fa-users-cog w-5 text-center"></i> User Management
                                 </Link>
@@ -163,7 +199,10 @@ function Dashboard() {
                         ) : (
                             <Link
                                 to="/dashboard/result"
-                                className={`flex items-center gap-2 px-3 py-2 rounded-lg w-full ${isActive("/dashboard/result") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"} transition-colors duration-200 text-sm`}
+                                className={`flex items-center gap-3 px-4 py-2 rounded-lg w-full text-sm ${isActive("/dashboard/result")
+                                    ? "bg-gray-900 text-green-400"
+                                    : "hover:bg-gray-600 hover:text-white"
+                                    } transition-colors duration-200`}
                             >
                                 <i className="fa-solid fa-chart-simple w-5 text-center"></i> Result
                             </Link>
@@ -171,7 +210,7 @@ function Dashboard() {
                     </nav>
                     <button
                         onClick={handleLogout}
-                        className="mt-4 px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors duration-200 flex items-center gap-2"
+                        className="mt-6 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors duration-200 flex items-center gap-3 w-full"
                     >
                         <i className="fa-solid fa-right-from-bracket w-5 text-center"></i> Logout
                     </button>
@@ -179,8 +218,8 @@ function Dashboard() {
             )}
 
             {/* Main Content */}
-            <main className="flex-1 p-4 sm:p-6">
-                <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-sm p-4 sm:p-6">
+            <main className={`flex-1 p-4 md:pl-52 lg:pl-68 w-full ${isQuizActive ? "pt-4" : "md:pt-4 pt-16"}`}>
+                <div className="w-full max-w-5xl mx-auto bg-white rounded-lg shadow-sm p-4 md:p-6">
                     <Routes>
                         <Route path="/" element={<Home />} />
                         <Route
@@ -200,7 +239,10 @@ function Dashboard() {
                             element={role === "admin" ? <EditQuiz /> : <Navigate to="/dashboard" />}
                         />
                         <Route path="attempt/:quizId" element={<AttemptQuiz setIsQuizActive={setIsQuizActive} />} />
-                        <Route path="quiz/:quizId/report" element={role === "admin" ? <QuizReport /> : <Navigate to="/dashboard" />} />
+                        <Route
+                            path="quiz/:quizId/report"
+                            element={role === "admin" ? <QuizReport /> : <Navigate to="/dashboard" />}
+                        />
                         <Route path="profile" element={<Profile />} />
                         <Route
                             path="users"
