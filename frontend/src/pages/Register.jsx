@@ -7,7 +7,6 @@ function Register() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [role, setRole] = useState("user");
     const [name, setName] = useState("");
     const [surname, setSurname] = useState("");
     const [branch, setBranch] = useState("");
@@ -77,28 +76,28 @@ function Register() {
 
     const validateBranch = (branch) => {
         const trimmedBranch = branch.trim();
-        if (role === "user" && !trimmedBranch) return "Branch is required";
-        if (role === "user" && trimmedBranch.length > 4) return "Branch must be 4 characters or less";
+        if (!trimmedBranch) return "Branch is required";
+        if (trimmedBranch.length > 4) return "Branch must be 4 characters or less";
         return "";
     };
 
     const validateDivision = (division) => {
         const trimmedDivision = division.trim();
-        if (role === "user" && !trimmedDivision) return "Division is required";
-        if (role === "user" && trimmedDivision.length > 2) return "Division must be 2 characters or less";
+        if (!trimmedDivision) return "Division is required";
+        if (trimmedDivision.length > 2) return "Division must be 2 characters or less";
         return "";
     };
 
     const validateRollNo = (rollNo) => {
         const trimmedRollNo = rollNo.trim();
-        if (role === "user" && !trimmedRollNo) return "Roll No is required";
-        if (role === "user" && (!/^\d{1,3}$/.test(trimmedRollNo) || parseInt(trimmedRollNo) > 999)) return "Roll No must be a 3-digit number or less";
+        if (!trimmedRollNo) return "Roll No is required";
+        if (!/^\d{1,3}$/.test(trimmedRollNo) || parseInt(trimmedRollNo) > 999) return "Roll No must be a 3-digit number or less";
         return "";
     };
 
     const validateYear = (year) => {
-        if (role === "user" && !year) return "Year is required";
-        if (role === "user" && !["FY", "SY", "TY", "FOURTH"].includes(year)) return "Invalid year";
+        if (!year) return "Year is required";
+        if (!["FY", "SY", "TY", "FOURTH"].includes(year)) return "Invalid year";
         return "";
     };
 
@@ -113,9 +112,8 @@ function Register() {
         const divisionError = validateDivision(division);
         const rollNoError = validateRollNo(rollNo);
         const yearError = validateYear(year);
-        const roleError = !["user", "admin"].includes(role) ? "Role must be Student or Teacher" : "";
 
-        const errors = [emailError, passwordError, confirmPasswordError, nameError, surnameError, branchError, divisionError, rollNoError, yearError, roleError].filter(Boolean);
+        const errors = [emailError, passwordError, confirmPasswordError, nameError, surnameError, branchError, divisionError, rollNoError, yearError].filter(Boolean);
         if (errors.length) {
             setPopup({ message: errors.join("<br />"), type: "error" });
             return;
@@ -124,15 +122,13 @@ function Register() {
         const formattedData = {
             email: email.toLowerCase().trim(),
             password: password.trim(),
-            role,
+            role: "user",
             name: formatName(name),
             surname: formatName(surname),
-            ...(role === "user" && {
-                branch: formatBranch(branch),
-                division: formatDivision(division),
-                rollNo: rollNo.trim(),
-                year,
-            }),
+            branch: formatBranch(branch),
+            division: formatDivision(division),
+            rollNo: rollNo.trim(),
+            year,
         };
 
         try {
@@ -157,17 +153,6 @@ function Register() {
                     <i className="fas fa-user-plus"></i> Register
                 </h2>
                 <form onSubmit={handleRegister} className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    <div className="col-span-full">
-                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Role</label>
-                        <select
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                        >
-                            <option value="user">Student</option>
-                            <option value="admin">Teacher</option>
-                        </select>
-                    </div>
                     <div className="col-span-full">
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Email</label>
                         <input
@@ -232,54 +217,50 @@ function Register() {
                             onChange={(e) => setSurname(e.target.value)}
                         />
                     </div>
-                    {role === "user" && (
-                        <>
-                            <div>
-                                <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Branch</label>
-                                <input
-                                    type="text"
-                                    placeholder="Branch (max 4 chars)"
-                                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                                    value={branch}
-                                    onChange={(e) => setBranch(e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Division</label>
-                                <input
-                                    type="text"
-                                    placeholder="Division (max 2 chars)"
-                                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                                    value={division}
-                                    onChange={(e) => setDivision(e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Roll Number</label>
-                                <input
-                                    type="number"
-                                    placeholder="Roll No (max 3 digits)"
-                                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                                    value={rollNo}
-                                    onChange={(e) => setRollNo(e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Year</label>
-                                <select
-                                    value={year}
-                                    onChange={(e) => setYear(e.target.value)}
-                                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                                >
-                                    <option value="">Select Year</option>
-                                    <option value="FY">FY</option>
-                                    <option value="SY">SY</option>
-                                    <option value="TY">TY</option>
-                                    <option value="FOURTH">FOURTH</option>
-                                </select>
-                            </div>
-                        </>
-                    )}
+                    <div>
+                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Branch</label>
+                        <input
+                            type="text"
+                            placeholder="Branch (max 4 chars)"
+                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            value={branch}
+                            onChange={(e) => setBranch(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Division</label>
+                        <input
+                            type="text"
+                            placeholder="Division (max 2 chars)"
+                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            value={division}
+                            onChange={(e) => setDivision(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Roll Number</label>
+                        <input
+                            type="number"
+                            placeholder="Roll No (max 3 digits)"
+                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            value={rollNo}
+                            onChange={(e) => setRollNo(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Year</label>
+                        <select
+                            value={year}
+                            onChange={(e) => setYear(e.target.value)}
+                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                        >
+                            <option value="">Select Year</option>
+                            <option value="FY">FY</option>
+                            <option value="SY">SY</option>
+                            <option value="TY">TY</option>
+                            <option value="FOURTH">FOURTH</option>
+                        </select>
+                    </div>
                     <div className="col-span-full flex justify-center">
                         <button
                             type="submit"

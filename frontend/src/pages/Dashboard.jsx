@@ -210,9 +210,23 @@ function Dashboard() {
                             </Link>
                             {/* Admin Registration URL Controls */}
                             <div className="px-4 py-3 bg-gray-900 rounded-lg w-full">
-                                <p className="text-sm text-green-200 truncate">
-                                    Admin URL: {adminUrlData.url || "Not set"}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-sm text-green-200 truncate">
+                                        Admin URL: {adminUrlData.url || "Not set"}
+                                    </p>
+                                    {adminUrlData.url && (
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(`http://localhost:5173${adminUrlData.url}`);
+                                                setPopup({ message: "Admin URL copied to clipboard", type: "success" });
+                                            }}
+                                            className="text-white hover:text-green-400"
+                                            title="Copy URL"
+                                        >
+                                            <i className="fa-solid fa-copy"></i>
+                                        </button>
+                                    )}
+                                </div>
                                 <p className="text-sm text-green-200">
                                     Expires in: {timeLeft || "N/A"}
                                 </p>
@@ -306,9 +320,23 @@ function Dashboard() {
                                 </Link>
                                 {/* Admin Registration URL Controls */}
                                 <div className="px-4 py-2 bg-gray-900 rounded-lg w-full">
-                                    <p className="text-sm text-green-200 truncate">
-                                        Admin URL: {adminUrlData.url || "Not set"}
-                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-sm text-green-200 truncate">
+                                            Admin URL: {adminUrlData.url || "Not set"}
+                                        </p>
+                                        {adminUrlData.url && (
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(`http://localhost:5173${adminUrlData.url}`);
+                                                    setPopup({ message: "Admin URL copied to clipboard", type: "success" });
+                                                }}
+                                                className="text-white hover:text-green-400"
+                                                title="Copy URL"
+                                            >
+                                                <i className="fa-solid fa-copy"></i>
+                                            </button>
+                                        )}
+                                    </div>
                                     <p className="text-sm text-green-200">
                                         Expires in: {timeLeft || "N/A"}
                                     </p>

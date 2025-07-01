@@ -2,6 +2,7 @@ const User = require("../models/User");
 const Quiz = require("../models/Quiz");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const AdminRegisterURL = require("../models/AdminRegisterURL");
 
 // Register user
 exports.register = async (req, res) => {
@@ -56,6 +57,41 @@ exports.login = async (req, res) => {
             },
         });
     } catch (err) {
+        res.status(500).json({ msg: "Server error" });
+    }
+};
+
+exports.adminRegister = async (req, res) => {
+    const { email, password, name, surname, randomString } = req.body;
+
+    try {
+        // Verify the randomString
+        const adminRegisterURL = await AdminRegisterURL.findOne({ randomString, isActive: true });
+        if (!adminRegisterURL || adminRegisterURL.expiresAt < Date.now()) {
+            return res.status(403).json({ msg: "Invalid or expired registration URL" });
+        }
+
+        // Check if email already exists
+        const exists = await User.findOne({ email });
+        if (exists) return res.status(400).json({ msg: "Email already registered" });
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Create new admin user
+        const newUser = new User({
+            email,
+            password: hashedPassword,
+            role: "admin",
+            name,
+            surname,
+        });
+        await newUser.save();
+
+        res.status(201).json({ msg: "Admin registered successfully" });
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ msg: "Server error" });
     }
 };

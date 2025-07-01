@@ -5,8 +5,7 @@ const crypto = require("crypto");
 function generateRandomString(length = 16) {
     return crypto.randomBytes(Math.ceil(length / 2)).toString("hex").slice(0, length);
 }
-
-// Get the current admin registration URL
+// In getCurrentURL
 exports.getCurrentURL = async (req, res) => {
     try {
         console.log("getCurrentURL: Fetching AdminRegisterURL...");
@@ -14,15 +13,16 @@ exports.getCurrentURL = async (req, res) => {
         if (!currentURL) {
             console.log("getCurrentURL: No URL found, creating new one...");
             const randomString = generateRandomString();
-            const newURL = new AdminRegisterURL({
-                url: `/admin-register-${randomString}`,
+            const newURL = `/admin-register/${randomString}`; // Changed to slash
+            const newAdminURL = new AdminRegisterURL({
+                url: newURL,
                 randomString,
                 expiresAt: new Date(Date.now() + 3 * 60 * 60 * 1000), // 3 hours
                 isActive: true
             });
-            await newURL.save();
-            console.log("getCurrentURL: New URL saved:", newURL);
-            return res.json(newURL);
+            await newAdminURL.save();
+            console.log("getCurrentURL: New URL saved:", newAdminURL);
+            return res.json(newAdminURL);
         }
         console.log("getCurrentURL: Found existing URL:", currentURL);
         res.json(currentURL);
@@ -32,12 +32,12 @@ exports.getCurrentURL = async (req, res) => {
     }
 };
 
-// Regenerate a new URL
+// In regenerateURL
 exports.regenerateURL = async (req, res) => {
     try {
         console.log("regenerateURL: Regenerating AdminRegisterURL...");
         const randomString = generateRandomString();
-        const newURL = `/admin-register-${randomString}`;
+        const newURL = `/admin-register/${randomString}`; // Changed to slash
         const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
 
         let currentURL = await AdminRegisterURL.findOne();
