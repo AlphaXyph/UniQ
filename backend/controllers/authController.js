@@ -3,6 +3,12 @@ const Quiz = require("../models/Quiz");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const AdminRegisterURL = require("../models/AdminRegisterURL");
+const crypto = require("crypto");
+
+// Generate a 16-character random string
+function generateRandomString(length = 16) {
+    return crypto.randomBytes(Math.ceil(length / 2)).toString("hex").slice(0, length);
+}
 
 // Register user
 exports.register = async (req, res) => {
@@ -28,6 +34,90 @@ exports.register = async (req, res) => {
         res.status(201).json({ msg: "User registered successfully" });
     } catch (err) {
         res.status(500).json({ msg: "Server error" });
+    }
+};
+
+// Get the current admin registration URL
+exports.getCurrentURL = async (req, res) => {
+    try {
+        console.log("getCurrentURL: Fetching AdminRegisterURL...");
+        let currentURL = await AdminRegisterURL.findOne();
+
+        // Log current time and expiresAt for debugging
+        const now = new Date();
+        console.log("getCurrentURL: Current server time (UTC):", now.toISOString());
+        if (currentURL) {
+            console.log("getCurrentURL: Found URL expiresAt (UTC):", currentURL.expiresAt.toISOString());
+        }
+
+        if (!currentURL) {
+            console.log("getCurrentURL: No URL found, creating new one...");
+            const randomString = generateRandomString();
+            const newURL = `/admin-register/${randomString}`;
+            const newAdminURL = new AdminRegisterURL({
+                url: newURL,
+                randomString,
+                expiresAt: new Date(Date.now() + 3 * 60 * 60 * 1000), // 3 hours
+                isActive: true,
+            });
+            await newAdminURL.save();
+            console.log("getCurrentURL: New URL saved:", newAdminURL);
+            return res.json(newAdminURL);
+        }
+
+        console.log("getCurrentURL: Found existing URL:", currentURL);
+        res.json(currentURL);
+    } catch (err) {
+        console.error("getCurrentURL: Error:", err.message, err.stack);
+        res.status(500).json({ msg: "Server error", error: err.message });
+    }
+};
+
+// Regenerate a new URL
+exports.regenerateURL = async (req, res) => {
+    try {
+        console.log("regenerateURL: Regenerating AdminRegisterURL...");
+        const randomString = generateRandomString();
+        const newURL = `/admin-register/${randomString}`;
+        const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
+
+        // Delete all existing AdminRegisterURL documents to invalidate old URLs
+        await AdminRegisterURL.deleteMany({});
+        console.log("regenerateURL: Cleared all existing AdminRegisterURL documents");
+
+        // Create a new AdminRegisterURL document
+        const newAdminURL = new AdminRegisterURL({
+            url: newURL,
+            randomString,
+            expiresAt,
+            isActive: true,
+        });
+        await newAdminURL.save();
+        console.log("regenerateURL: New URL created:", newAdminURL);
+
+        res.json(newAdminURL);
+    } catch (err) {
+        console.error("regenerateURL: Error:", err.message, err.stack);
+        res.status(500).json({ msg: "Server error", error: err.message });
+    }
+};
+
+// Toggle active status (pause/resume)
+exports.toggleActive = async (req, res) => {
+    try {
+        console.log("toggleActive: Toggling AdminRegisterURL active status...");
+        const currentURL = await AdminRegisterURL.findOne();
+        if (!currentURL) {
+            console.log("toggleActive: No URL found");
+            return res.status(404).json({ msg: "No admin register URL found" });
+        }
+        currentURL.isActive = !currentURL.isActive;
+        await currentURL.save();
+        console.log("toggleActive: URL status updated:", currentURL);
+        res.json(currentURL);
+    } catch (err) {
+        console.error("toggleActive: Error:", err.message, err.stack);
+        res.status(500).json({ msg: "Server error", error: err.message });
     }
 };
 
@@ -194,9 +284,13 @@ exports.deleteUser = async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ msg: "User not found" });
 
+        // Prevent admins from deleting other admins
         if (user.role === "admin") {
-            await Quiz.deleteMany({ createdBy: userId });
+            return res.status(403).json({ msg: "Admins cannot delete other admin accounts" });
         }
+
+        // Delete quizzes created by the user
+        await Quiz.deleteMany({ createdBy: userId });
 
         await User.findByIdAndDelete(userId);
         res.json({ msg: "User deleted successfully" });

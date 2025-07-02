@@ -49,6 +49,30 @@ function Dashboard() {
         }
     }, [navigate]);
 
+    const regenerateUrl = useCallback(async () => {
+        try {
+            console.log("Dashboard: Regenerating admin URL...");
+            const response = await api.post("/admin-register-url/regenerate");
+            console.log("Dashboard: Regenerate URL response:", response.data);
+            setAdminUrlData(response.data);
+            setIsExpired(false);
+            setPopup({ message: "Admin URL regenerated successfully", type: "success" });
+            setTimeLeft("");
+            return true;
+        } catch (err) {
+            console.error("Dashboard: Error regenerating admin URL:", err.response?.data || err.message);
+            if (err.response?.status === 401) {
+                setPopup({ message: "Session expired, please log in again", type: "error" });
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                setTimeout(() => navigate("/"), 2000);
+            } else {
+                setPopup({ message: err.response?.data?.msg || "Failed to regenerate admin URL", type: "error" });
+            }
+            return false;
+        }
+    }, [navigate]);
+
     useEffect(() => {
         const token = localStorage.getItem("token");
         console.log("Dashboard: Token:", token);
@@ -71,13 +95,12 @@ function Dashboard() {
             const expires = new Date(adminUrlData.expiresAt);
             const diff = expires - now;
 
-            if (diff <= 0) {
-                console.log("Dashboard: URL expired, timeLeft:", timeLeft);
+            if (diff <= 0 && !isExpired) {
+                console.log("Dashboard: URL expired, regenerating...");
                 setTimeLeft("Expired");
                 setIsExpired(true);
                 if (role === "admin") {
-                    console.log("Dashboard: Attempting to regenerate URL...");
-                    fetchAdminUrl().then((success) => {
+                    regenerateUrl().then((success) => {
                         if (success) {
                             console.log("Dashboard: URL regenerated successfully");
                             setPopup({ message: "Admin URL regenerated automatically", type: "success" });
@@ -87,7 +110,7 @@ function Dashboard() {
                         }
                     });
                 }
-            } else {
+            } else if (diff > 0) {
                 const hours = Math.floor(diff / (1000 * 60 * 60));
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                 const seconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -99,29 +122,7 @@ function Dashboard() {
             console.log("Dashboard: Clearing timer");
             clearInterval(timer);
         };
-    }, [adminUrlData.expiresAt, role, fetchAdminUrl, isExpired, timeLeft]);
-
-    const regenerateUrl = async () => {
-        try {
-            console.log("Dashboard: Regenerating admin URL...");
-            const response = await api.post("/admin-register-url/regenerate");
-            console.log("Dashboard: Regenerate URL response:", response.data);
-            setAdminUrlData(response.data);
-            setIsExpired(false);
-            setPopup({ message: "Admin URL regenerated successfully", type: "success" });
-            setTimeLeft("");
-        } catch (err) {
-            console.error("Dashboard: Error regenerating admin URL:", err.response?.data || err.message);
-            if (err.response?.status === 401) {
-                setPopup({ message: "Session expired, please log in again", type: "error" });
-                localStorage.removeItem("token");
-                localStorage.removeItem("user");
-                setTimeout(() => navigate("/"), 2000);
-            } else {
-                setPopup({ message: err.response?.data?.msg || "Failed to regenerate admin URL", type: "error" });
-            }
-        }
-    };
+    }, [adminUrlData.expiresAt, role, isExpired, regenerateUrl]);
 
     const toggleActive = async () => {
         try {
@@ -207,6 +208,7 @@ function Dashboard() {
                 </header>
             )}
 
+            {/* Mobile Sidebar */}
             {!isQuizActive && (
                 <nav
                     className={`${menuOpen ? "translate-x-0" : "-translate-x-full"
@@ -263,7 +265,10 @@ function Dashboard() {
                         {role === "admin" && (
                             <div className="px-3 py-2 bg-gray-900 rounded-lg w-full">
                                 <p className="text-xs text-white truncate max-w-[85%]">
-                                    Admin URL: {adminUrlData.url || "Not set"}
+                                    Admin URL:
+                                </p>
+                                <p className="text-xs text-white max-w-[85%]">
+                                    {adminUrlData.url || "Not set"}
                                 </p>
                                 <p className="text-xs text-green-200 mt-1">
                                     Expires in: {timeLeft || "N/A"}
@@ -335,9 +340,7 @@ function Dashboard() {
                     <nav className="flex flex-col flex-grow justify-center gap-2 w-full">
                         <Link
                             to="/dashboard"
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-h-[40px] ${isActive("/dashboard")
-                                ? "bg-gray-900 text-green-400"
-                                : "hover:bg-gray-600 hover:text-white"
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-h-[40px] ${isActive("/dashboard") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"
                                 } transition-colors duration-200`}
                         >
                             <i className="fa-solid fa-house w-5 text-center"></i> Home
@@ -346,45 +349,33 @@ function Dashboard() {
                             <>
                                 <Link
                                     to="/dashboard/create"
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-h-[40px] ${isActive("/dashboard/create")
-                                        ? "bg-gray-900 text-green-400"
-                                        : "hover:bg-gray-600 hover:text-white"
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-h-[40px] ${isActive("/dashboard/create") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"
                                         } transition-colors duration-200`}
                                 >
-                                    <i className="fa-solid fa-hexagon-nodes w-5 text-center"></i>{" "}
-                                    Create Quiz
+                                    <i className="fa-solid fa-hexagon-nodes w-5 text-center"></i> Create Quiz
                                 </Link>
                                 <Link
                                     to="/dashboard/allreports"
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-h-[40px] ${isActive("/dashboard/allreports")
-                                        ? "bg-gray-900 text-green-400"
-                                        : "hover:bg-gray-600 hover:text-white"
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-h-[40px] ${isActive("/dashboard/allreports") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"
                                         } transition-colors duration-200`}
                                 >
-                                    <i className="fa-solid fa-chart-simple w-5 text-center"></i>{" "}
-                                    Reports
+                                    <i className="fa-solid fa-chart-simple w-5 text-center"></i> Reports
                                 </Link>
                                 <Link
                                     to="/dashboard/users"
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-h-[40px] ${isActive("/dashboard/users")
-                                        ? "bg-gray-900 text-green-400"
-                                        : "hover:bg-gray-600 hover:text-white"
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-h-[40px] ${isActive("/dashboard/users") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"
                                         } transition-colors duration-200`}
                                 >
-                                    <i className="fa-solid fa-users-cog w-5 text-center"></i>{" "}
-                                    User Management
+                                    <i className="fa-solid fa-users-cog w-5 text-center"></i> User Management
                                 </Link>
                             </>
                         ) : (
                             <Link
                                 to="/dashboard/result"
-                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-h-[40px] ${isActive("/dashboard/result")
-                                    ? "bg-gray-900 text-green-400"
-                                    : "hover:bg-gray-600 hover:text-white"
+                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-h-[40px] ${isActive("/dashboard/result") ? "bg-gray-900 text-green-400" : "hover:bg-gray-600 hover:text-white"
                                     } transition-colors duration-200`}
                             >
-                                <i className="fa-solid fa-chart-simple w-5 text-center"></i>{" "}
-                                Result
+                                <i className="fa-solid fa-chart-simple w-5 text-center"></i> Result
                             </Link>
                         )}
                     </nav>
@@ -410,9 +401,7 @@ function Dashboard() {
                                     </button>
                                     <button
                                         onClick={copyUrl}
-                                        className={`text-green-300 hover:text-green-400 text-sm transition-colors duration-200 w-5 text-center ${!adminUrlData.url
-                                            ? "opacity-50 cursor-not-allowed"
-                                            : ""
+                                        className={`text-green-300 hover:text-green-400 text-sm transition-colors duration-200 w-5 text-center ${!adminUrlData.url ? "opacity-50 cursor-not-allowed" : ""
                                             }`}
                                         title="Copy Admin URL"
                                         disabled={!adminUrlData.url}
@@ -429,19 +418,9 @@ function Dashboard() {
                                     <button
                                         onClick={toggleActive}
                                         className="text-green-300 hover:text-green-400 text-sm transition-colors duration-200 w-5 text-center"
-                                        title={
-                                            adminUrlData.isActive
-                                                ? "Pause Registration"
-                                                : "Resume Registration"
-                                        }
+                                        title={adminUrlData.isActive ? "Pause Registration" : "Resume Registration"}
                                     >
-                                        <i
-                                            className={
-                                                adminUrlData.isActive
-                                                    ? "fa-solid fa-pause"
-                                                    : "fa-solid fa-play"
-                                            }
-                                        ></i>
+                                        <i className={adminUrlData.isActive ? "fa-solid fa-pause" : "fa-solid fa-play"}></i>
                                     </button>
                                 </div>
                             </div>
@@ -450,8 +429,7 @@ function Dashboard() {
                             onClick={handleLogout}
                             className="px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors duration-200 flex items-center gap-2 w-full min-h-[40px]"
                         >
-                            <i className="fa-solid fa-right-from-bracket w-5 text-center"></i>{" "}
-                            Logout
+                            <i className="fa-solid fa-right-from-bracket w-5 text-center"></i> Logout
                         </button>
                     </div>
                 </aside>
@@ -459,47 +437,26 @@ function Dashboard() {
 
             {/* Main Content */}
             <main
-                className={`flex-1 p-4 w-full ${isQuizActive ? "pt-0" : "pt-[3.5rem] md:pt-4 md:pl-60"
-                    }`}
+                className={`flex-1 p-4 w-full ${isQuizActive ? "pt-0" : "pt-[3.5rem] md:pt-4 md:pl-60"}`}
             >
                 <div className="w-full max-w-full sm:max-w-5xl mx-auto bg-white rounded-lg shadow-sm p-4 md:p-6">
                     <Routes>
                         <Route path="/" element={<Home />} />
                         <Route
                             path="create"
-                            element={
-                                role === "admin" ? (
-                                    <CreateQuiz />
-                                ) : (
-                                    <Navigate to="/dashboard" />
-                                )
-                            }
+                            element={role === "admin" ? <CreateQuiz /> : <Navigate to="/dashboard" />}
                         />
                         <Route
                             path="allreports"
-                            element={
-                                role === "admin" ? (
-                                    <AllReports />
-                                ) : (
-                                    <Navigate to="/dashboard" />
-                                )
-                            }
+                            element={role === "admin" ? <AllReports /> : <Navigate to="/dashboard" />}
                         />
                         <Route
                             path="result"
-                            element={
-                                role === "user" ? <Result /> : <Navigate to="/dashboard" />
-                            }
+                            element={role === "user" ? <Result /> : <Navigate to="/dashboard" />}
                         />
                         <Route
                             path="edit/:quizId"
-                            element={
-                                role === "admin" ? (
-                                    <EditQuiz />
-                                ) : (
-                                    <Navigate to="/dashboard" />
-                                )
-                            }
+                            element={role === "admin" ? <EditQuiz /> : <Navigate to="/dashboard" />}
                         />
                         <Route
                             path="attempt/:quizId"
@@ -507,24 +464,12 @@ function Dashboard() {
                         />
                         <Route
                             path="quiz/:quizId/report"
-                            element={
-                                role === "admin" ? (
-                                    <QuizReport />
-                                ) : (
-                                    <Navigate to="/dashboard" />
-                                )
-                            }
+                            element={role === "admin" ? <QuizReport /> : <Navigate to="/dashboard" />}
                         />
                         <Route path="profile" element={<Profile />} />
                         <Route
                             path="users"
-                            element={
-                                role === "admin" ? (
-                                    <UserManagement />
-                                ) : (
-                                    <Navigate to="/dashboard" />
-                                )
-                            }
+                            element={role === "admin" ? <UserManagement /> : <Navigate to="/dashboard" />}
                         />
                     </Routes>
                 </div>

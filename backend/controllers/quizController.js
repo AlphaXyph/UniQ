@@ -51,16 +51,20 @@ const getQuiz = async (req, res) => {
 const updateQuiz = async (req, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ msg: "Admin access required" });
     try {
+        const quiz = await Quiz.findById(req.params.quizId);
+        if (!quiz) return res.status(404).json({ msg: "Quiz not found" });
+        if (quiz.createdBy.toString() !== req.user.id) {
+            return res.status(403).json({ msg: "You can only edit quizzes you created" });
+        }
         const { title, questions, timer, subject, isVisible } = req.body;
         if (!title || !questions || questions.length === 0 || !timer || timer < 1 || !subject) {
             return res.status(400).json({ msg: "Title, questions, valid timer, and subject are required" });
         }
-        const quiz = await Quiz.findByIdAndUpdate(
+        const updatedQuiz = await Quiz.findByIdAndUpdate(
             req.params.quizId,
             { subject, title, questions, timer, isVisible },
             { new: true }
         );
-        if (!quiz) return res.status(404).json({ msg: "Quiz not found" });
         res.json({ msg: "Quiz updated successfully" });
     } catch (err) {
         console.error("Update quiz error:", err);
@@ -71,8 +75,12 @@ const updateQuiz = async (req, res) => {
 const deleteQuiz = async (req, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ msg: "Admin access required" });
     try {
-        const quiz = await Quiz.findByIdAndDelete(req.params.quizId);
+        const quiz = await Quiz.findById(req.params.quizId);
         if (!quiz) return res.status(404).json({ msg: "Quiz not found" });
+        if (quiz.createdBy.toString() !== req.user.id) {
+            return res.status(403).json({ msg: "You can only delete quizzes you created" });
+        }
+        await Quiz.findByIdAndDelete(req.params.quizId);
         await Result.deleteMany({ quiz: req.params.quizId });
         res.json({ msg: "Quiz deleted" });
     } catch (err) {
@@ -86,6 +94,9 @@ const toggleQuizVisibility = async (req, res) => {
     try {
         const quiz = await Quiz.findById(req.params.quizId);
         if (!quiz) return res.status(404).json({ msg: "Quiz not found" });
+        if (quiz.createdBy.toString() !== req.user.id) {
+            return res.status(403).json({ msg: "You can only toggle visibility for quizzes you created" });
+        }
         quiz.isVisible = !quiz.isVisible;
         await quiz.save();
         res.json({ msg: `Quiz is now ${quiz.isVisible ? "visible" : "hidden"}` });

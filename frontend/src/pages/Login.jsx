@@ -8,15 +8,54 @@ function Login() {
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success" });
+    const [errors, setErrors] = useState({});
     const navigate = useNavigate();
+
+    const validateEmail = (value) => {
+        const lowerCaseEmail = value.toLowerCase().trim();
+        if (!lowerCaseEmail) return "Email is required";
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(lowerCaseEmail)) return "Invalid email format";
+        if (!lowerCaseEmail.endsWith("@ves.ac.in")) return "Email must end with @ves.ac.in";
+        return "";
+    };
+
+    const validatePassword = (value) => {
+        const trimmedPassword = value.trim();
+        if (!trimmedPassword) return "Password is required";
+        if (trimmedPassword.length < 8) return "Password must be at least 8 characters long";
+        return "";
+    };
+
+    const validateForm = () => {
+        const newErrors = {
+            email: validateEmail(email),
+            password: validatePassword(password),
+        };
+        setErrors(newErrors);
+        return Object.values(newErrors).every((error) => !error);
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        if (!validateForm()) {
+            setPopup({ message: "Please fix the errors in the form", type: "error" });
+            return;
+        }
+
+        const formattedData = {
+            email: email.toLowerCase().trim(),
+            password: password.trim(),
+        };
+
+        console.log("Login: Sending data:", formattedData);
+
         try {
-            const res = await API.post("/auth/login", { email, password });
+            const res = await API.post("/auth/login", formattedData);
             const { token, user } = res.data;
             localStorage.setItem("token", token);
             localStorage.setItem("user", JSON.stringify(user));
+            console.log("Login: Stored user in localStorage:", user);
             setPopup({ message: "Login successful!", type: "success" });
             setTimeout(() => navigate("/dashboard"), 2000);
         } catch (err) {
@@ -27,6 +66,7 @@ function Login() {
 
     const closePopup = () => {
         setPopup({ message: "", type: "success" });
+        setErrors({});
     };
 
     return (
@@ -41,20 +81,23 @@ function Login() {
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Email</label>
                         <input
                             type="email"
-                            placeholder="Email"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            placeholder="Email (must end with @ves.ac.in)"
+                            className={`w-full p-2 sm:p-3 border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, email: validateEmail(email) })}
                         />
+                        {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                     </div>
                     <div className="relative">
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Password</label>
                         <input
                             type={showPassword ? "text" : "password"}
-                            placeholder="Password"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            placeholder="Password (8+ chars)"
+                            className={`w-full p-2 sm:p-3 border ${errors.password ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, password: validatePassword(password) })}
                         />
                         <button
                             type="button"
@@ -63,6 +106,7 @@ function Login() {
                         >
                             <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
                         </button>
+                        {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                     </div>
                     <button
                         type="submit"

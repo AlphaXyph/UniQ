@@ -45,6 +45,6 @@ const userSchema = new mongoose.Schema({
         enum: ["FY", "SY", "TY", "FOURTH"],
         required: function () { return this.role === "user"; },
     },
-});
+}, { timestamps: true }); // Add timestamps for createdAt and updatedAt
 
 module.exports = mongoose.model("User", userSchema);

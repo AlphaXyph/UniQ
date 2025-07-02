@@ -230,7 +230,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                     <h2 className="text-lg sm:text-xl font-bold text-gray-800">{quiz.subject} - {quiz.title}</h2>
                     <p className="text-sm sm:text-base text-gray-600">Subject: {quiz.subject}</p>
                     {quiz.questions.map((q, i) => (
-                        <div key={q._id || i} className="p-4 sm:p-6 border border-gray-200 rounded-lg bg-gray-50 shadow-sm">
+                        <div key={q._id || i} className="p-4 sm:p-6 border border-gray-200 rounded-lg bg-gray-50 shadow-md">
                             <p className="font-semibold text-xs sm:text-sm">{i + 1}. {q.question}</p>
                             {q.options.map((opt, j) => (
                                 <p key={j} className="ml-2 text-xs sm:text-sm">{j + 1}. {opt} {q.answer === j ? <span className="text-green-600">(✔️ Correct)</span> : ""}</p>
@@ -255,7 +255,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                     <Popup message={popup.message} type={popup.type} onClose={closePopup} confirmAction={popup.confirmAction} />
                     <h2 className="text-lg sm:text-xl font-bold text-gray-800">{quiz.title}</h2>
                     <p className="text-sm sm:text-base text-gray-600">Subject: {quiz.subject}</p>
-                    <div className="p-4 sm:p-6 border border-gray-200 rounded-lg bg-gray-50 shadow-sm">
+                    <div className="p-4 sm:p-6 border border-gray-200 rounded-lg bg-gray-100 shadow-md">
                         <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3">Quiz Instructions</h3>
                         <p className="text-xs sm:text-sm text-gray-600 mb-4">
                             Please read the following instructions carefully before starting the quiz to ensure a fair and smooth experience.
@@ -289,7 +289,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                     <p className="text-sm sm:text-base font-semibold text-red-600">Time Left: {formatTime(timeLeft)}</p>
                 </div>
                 {quiz.questions.map((q, i) => (
-                    <div key={q._id || i} className="p-4 sm:p-6 border border-gray-200 rounded-lg bg-gray-50 shadow-sm">
+                    <div key={q._id || i} className="p-4 sm:p-6 border border-gray-200 rounded-lg bg-gray-100 shadow-md">
                         <p className="font-semibold text-xs sm:text-sm">{i + 1}. {q.question}</p>
                         {q.options.map((opt, j) => (
                             <label key={j} className="block mt-2 text-xs sm:text-sm">

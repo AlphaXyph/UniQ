@@ -27,8 +27,8 @@ function UserManagement() {
                 const response = await API.get("/auth/users", {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                setUsers(response.data);
-                setFilteredUsers(response.data);
+                setUsers(response.data || []);
+                setFilteredUsers(response.data || []);
             } catch (err) {
                 setPopup({ message: err.response?.data?.msg || "Failed to fetch users", type: "error" });
             }
@@ -39,7 +39,7 @@ function UserManagement() {
 
     useEffect(() => {
         const filtered = users.filter((u) =>
-            `${u.name} ${u.surname}`.toLowerCase().includes(searchQuery.toLowerCase())
+            `${u.name} ${u.surname} ${u.email}`.toLowerCase().includes(searchQuery.toLowerCase())
         );
         setFilteredUsers(filtered);
     }, [searchQuery, users]);
@@ -75,7 +75,15 @@ function UserManagement() {
         setConfirmInput("");
     };
 
-    const admins = filteredUsers.filter((u) => u.role === "admin");
+    const fiveDaysAgo = new Date();
+    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+
+    const admins = filteredUsers.filter(
+        (u) => u.role === "admin" && (!u.createdAt || new Date(u.createdAt) < fiveDaysAgo)
+    );
+    const newAdmins = filteredUsers.filter(
+        (u) => u.role === "admin" && u.createdAt && new Date(u.createdAt) >= fiveDaysAgo
+    );
     const regularUsers = filteredUsers.filter((u) => u.role === "user");
 
     return (
@@ -101,11 +109,64 @@ function UserManagement() {
                 <div className="mb-4 sm:mb-6">
                     <input
                         type="text"
-                        placeholder="Search by name or surname..."
+                        placeholder="Search by name, surname, or email..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                     />
+                </div>
+
+                {/* New Admins Section (Less than 5 days old) */}
+                <div className="mb-6 sm:mb-8">
+                    <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">New Admins (Last 5 Days)</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full table-fixed border border-gray-200 rounded-lg shadow-md">
+                            <thead>
+                                <tr className="bg-gray-100 border-b">
+                                    <th className="py-2 sm:py-3 px-2 sm:px-4 text-left w-[40%] text-xs sm:text-sm">Name</th>
+                                    <th className="py-2 sm:py-3 px-2 sm:px-4 text-left w-[20%] text-xs sm:text-sm">Role</th>
+                                    <th className="py-2 sm:py-3 px-2 sm:px-4 text-left w-[40%] text-xs sm:text-sm">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {newAdmins.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="3" className="py-2 sm:py-3 px-2 sm:px-4 text-center text-xs sm:text-sm text-gray-500">
+                                            No new admins in the last 5 days.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    newAdmins.map((admin) => (
+                                        <React.Fragment key={admin._id}>
+                                            <tr className="border-b hover:bg-gray-50">
+                                                <td className="py-2 sm:py-3 px-2 sm:px-4 w-[40%] text-xs sm:text-sm truncate">{`${admin.name} ${admin.surname}`}</td>
+                                                <td className="py-2 sm:py-3 px-2 sm:px-4 w-[20%] text-xs sm:text-sm">{admin.role}</td>
+                                                <td className="py-2 sm:py-3 px-2 sm:px-4 w-[40%] text-xs sm:text-sm">
+                                                    <button
+                                                        onClick={() => toggleDetails(admin._id)}
+                                                        className="text-blue-500 hover:text-blue-700 font-semibold"
+                                                    >
+                                                        {expandedUserId === admin._id ? "Hide Details" : "Details"}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {expandedUserId === admin._id && (
+                                                <tr>
+                                                    <td colSpan="3" className="py-2 sm:py-3 px-2 sm:px-4 bg-gray-50">
+                                                        <div className="flex flex-col gap-2 text-xs sm:text-sm">
+                                                            <p><strong>Email:</strong> {admin.email}</p>
+                                                            <p><strong>Role:</strong> {admin.role}</p>
+                                                            <p><strong>Created At:</strong> {admin.createdAt ? new Date(admin.createdAt).toLocaleDateString() : "N/A"}</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 {/* Admins Section */}
@@ -121,38 +182,41 @@ function UserManagement() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {admins.map((admin) => (
-                                    <React.Fragment key={admin._id}>
-                                        <tr className="border-b hover:bg-gray-50">
-                                            <td className="py-2 sm:py-3 px-2 sm:px-4 w-[40%] text-xs sm:text-sm truncate">{`${admin.name} ${admin.surname}`}</td>
-                                            <td className="py-2 sm:py-3 px-2 sm:px-4 w-[20%] text-xs sm:text-sm">{admin.role}</td>
-                                            <td className="py-2 sm:py-3 px-2 sm:px-4 w-[40%] text-xs sm:text-sm">
-                                                <button
-                                                    onClick={() => toggleDetails(admin._id)}
-                                                    className="text-blue-500 hover:text-blue-700 font-semibold"
-                                                >
-                                                    {expandedUserId === admin._id ? "Hide Details" : "Details"}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        {expandedUserId === admin._id && (
-                                            <tr>
-                                                <td colSpan="3" className="py-2 sm:py-3 px-2 sm:px-4 bg-gray-50">
-                                                    <div className="flex flex-col gap-2 text-xs sm:text-sm">
-                                                        <p><strong>Email:</strong> {admin.email}</p>
-                                                        <p><strong>Role:</strong> {admin.role}</p>
-                                                        <button
-                                                            onClick={() => setDeleteConfirm(admin)}
-                                                            className="mt-2 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200 text-xs sm:text-sm w-full sm:w-auto"
-                                                        >
-                                                            Delete Account
-                                                        </button>
-                                                    </div>
+                                {admins.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="3" className="py-2 sm:py-3 px-2 sm:px-4 text-center text-xs sm:text-sm text-gray-500">
+                                            No older admins found.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    admins.map((admin) => (
+                                        <React.Fragment key={admin._id}>
+                                            <tr className="border-b hover:bg-gray-50">
+                                                <td className="py-2 sm:py-3 px-2 sm:px-4 w-[40%] text-xs sm:text-sm truncate">{`${admin.name} ${admin.surname}`}</td>
+                                                <td className="py-2 sm:py-3 px-2 sm:px-4 w-[20%] text-xs sm:text-sm">{admin.role}</td>
+                                                <td className="py-2 sm:py-3 px-2 sm:px-4 w-[40%] text-xs sm:text-sm">
+                                                    <button
+                                                        onClick={() => toggleDetails(admin._id)}
+                                                        className="text-blue-500 hover:text-blue-700 font-semibold"
+                                                    >
+                                                        {expandedUserId === admin._id ? "Hide Details" : "Details"}
+                                                    </button>
                                                 </td>
                                             </tr>
-                                        )}
-                                    </React.Fragment>
-                                ))}
+                                            {expandedUserId === admin._id && (
+                                                <tr>
+                                                    <td colSpan="3" className="py-2 sm:py-3 px-2 sm:px-4 bg-gray-50">
+                                                        <div className="flex flex-col gap-2 text-xs sm:text-sm">
+                                                            <p><strong>Email:</strong> {admin.email}</p>
+                                                            <p><strong>Role:</strong> {admin.role}</p>
+                                                            <p><strong>Created At:</strong> {admin.createdAt ? new Date(admin.createdAt).toLocaleDateString() : "N/A"}</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
