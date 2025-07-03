@@ -12,7 +12,7 @@ function AttemptQuiz({ setIsQuizActive }) {
     const [isStarted, setIsStarted] = useState(false);
     const [timeLeft, setTimeLeft] = useState(null);
     const [violationCount, setViolationCount] = useState(0);
-    const [isSubmitted, setIsSubmitted] = useState(false); // New state
+    const [isSubmitted, setIsSubmitted] = useState(false);
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem("user"));
     const role = user?.role || "user";
@@ -36,6 +36,14 @@ function AttemptQuiz({ setIsQuizActive }) {
                 const res = await API.get(`/quiz/${quizId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
+                if (res.data.hasAttempted && role === "user") {
+                    setPopup({
+                        message: "You have already attempted this quiz.",
+                        type: "error",
+                        confirmAction: () => navigate("/dashboard/result"),
+                    });
+                    return;
+                }
                 if (role === "user") {
                     const { shuffled, indices } = shuffleArray(res.data.questions);
                     setQuiz({ ...res.data, questions: shuffled });
@@ -50,7 +58,7 @@ function AttemptQuiz({ setIsQuizActive }) {
             }
         };
         fetchQuiz();
-    }, [quizId, role]);
+    }, [quizId, role, navigate]);
 
     const handleSubmit = useCallback(
         async (isAutoSubmit = false) => {
@@ -73,12 +81,12 @@ function AttemptQuiz({ setIsQuizActive }) {
             try {
                 const token = localStorage.getItem("token");
                 const orderedAnswers = role === "user" ? answers.map((_, i) => answers[originalIndices.indexOf(i)]) : answers;
-                await API.post(
+                const response = await API.post(
                     "/result/submit",
                     { quizId, answers: orderedAnswers },
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
-                setPopup({ message: "Your test was submitted successfully", type: "success", confirmAction: null });
+                setPopup({ message: response.data.msg || "Your test was submitted successfully", type: "success", confirmAction: null });
                 document.exitFullscreen?.();
                 setIsQuizActive(false);
                 setTimeout(() => navigate("/dashboard/result"), 2000);

@@ -10,7 +10,7 @@ function Home() {
     const [confirmInput, setConfirmInput] = useState("");
     const user = JSON.parse(localStorage.getItem("user")) || {};
     const role = user?.role;
-    const userEmail = user?.email; // Use email instead of userId
+    const userEmail = user?.email;
     const navigate = useNavigate();
 
     const fetchQuizzes = async () => {
@@ -129,7 +129,7 @@ function Home() {
                             </h3>
                             <ul className="space-y-2">
                                 {groupedQuizzes.grouped[date].map((q) => {
-                                    console.log("Quiz:", q._id, "Created by email:", q.createdBy?.email, "User email:", userEmail); // Debug
+                                    console.log("Quiz:", q._id, "Created by email:", q.createdBy?.email, "User email:", userEmail);
                                     return (
                                         <li
                                             key={q._id}
@@ -149,13 +149,17 @@ function Home() {
                                                             <span> | Status: {q.isVisible ? "Visible" : "Hidden"}</span>
                                                         )}
                                                     </p>
-                                                    {role === "user" && q.isVisible ? (
+                                                    {role === "user" && q.isVisible && !q.hasAttempted ? (
                                                         <Link
                                                             to={`/dashboard/attempt/${q._id}`}
                                                             className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium mt-1 inline-block"
                                                         >
                                                             Attempt Quiz
                                                         </Link>
+                                                    ) : role === "user" && q.isVisible && q.hasAttempted ? (
+                                                        <span className="text-green-500 text-xs sm:text-sm mt-1 inline-block">
+                                                            <strong>Quiz Attempted</strong>
+                                                        </span>
                                                     ) : role === "admin" ? (
                                                         <div className="flex gap-2 mt-1">
                                                             <Link

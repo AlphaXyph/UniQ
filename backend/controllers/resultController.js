@@ -6,6 +6,12 @@ const submitQuiz = async (req, res) => {
         const { quizId, answers } = req.body;
         const studentId = req.user.id;
 
+        // Check if the user has already submitted this quiz
+        const existingResult = await Result.findOne({ student: studentId, quiz: quizId });
+        if (existingResult) {
+            return res.status(403).json({ msg: "You have already attempted this quiz" });
+        }
+
         console.log("Submitting quiz:", { quizId, studentId, answers });
         const quiz = await Quiz.findById(quizId);
         if (!quiz) return res.status(404).json({ msg: "Quiz not found" });

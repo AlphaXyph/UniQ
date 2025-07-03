@@ -24,7 +24,19 @@ const getAllQuizzes = async (req, res) => {
         const quizzes = await Quiz.find(filter)
             .select("-questions.answer")
             .populate("createdBy", "email");
-        res.json(quizzes);
+
+        // For users, check which quizzes they've attempted
+        let quizzesWithAttemptStatus = quizzes;
+        if (req.user.role === "user") {
+            const results = await Result.find({ student: req.user.id }).select("quiz");
+            const attemptedQuizIds = new Set(results.map((r) => r.quiz.toString()));
+            quizzesWithAttemptStatus = quizzes.map((quiz) => ({
+                ...quiz._doc,
+                hasAttempted: attemptedQuizIds.has(quiz._id.toString()),
+            }));
+        }
+
+        res.json(quizzesWithAttemptStatus);
     } catch (err) {
         console.error("Get all quizzes error:", err);
         res.status(500).json({ msg: "Failed to fetch quizzes" });
@@ -38,10 +50,18 @@ const getQuiz = async (req, res) => {
         if (req.user.role !== "admin" && !quiz.isVisible) {
             return res.status(403).json({ msg: "Quiz is not visible" });
         }
+
+        // Check if the user has already attempted the quiz
+        const hasAttempted = req.user.role === "user"
+            ? await Result.findOne({ student: req.user.id, quiz: req.params.quizId }) !== null
+            : false;
+
+        // Remove correct answers for non-admin users
         if (req.user.role !== "admin") {
             quiz.questions = quiz.questions.map((q) => ({ ...q._doc, answer: undefined }));
         }
-        res.json(quiz);
+
+        res.json({ ...quiz._doc, hasAttempted });
     } catch (err) {
         console.error("Get quiz error:", err);
         res.status(500).json({ msg: "Server error" });
