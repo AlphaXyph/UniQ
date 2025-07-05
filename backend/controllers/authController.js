@@ -1,8 +1,8 @@
-const User = require("../models/User");
-const Quiz = require("../models/Quiz");
+const User = require("../models/user");
+const Quiz = require("../models/quiz");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const AdminRegisterURL = require("../models/AdminRegisterURL");
+const AdminRegisterURL = require("../models/adminRegisterURL");
 const crypto = require("crypto");
 
 // Generate a 16-character random string

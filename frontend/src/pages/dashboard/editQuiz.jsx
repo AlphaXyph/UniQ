@@ -1,10 +1,11 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams } from "react-router-dom";
 import API from "../../../api";
 import Papa from "papaparse";
-import Popup from "../../components/Popup";
-import AIChatbot from "../../components/AIChatbot";
+import Popup from "../../components/popup";
 
-function CreateQuiz() {
+function EditQuiz() {
+    const { quizId } = useParams();
     const [title, setTitle] = useState("");
     const [questions, setQuestions] = useState([]);
     const [timer, setTimer] = useState(5);
@@ -14,9 +15,26 @@ function CreateQuiz() {
     const [showNewSubjectInput, setShowNewSubjectInput] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success", confirmAction: null, confirmInput: "" });
-    const [isChatbotOpen, setIsChatbotOpen] = useState(false);
     const fileInputRef = useRef(null);
     const user = JSON.parse(localStorage.getItem("user"));
+
+    useEffect(() => {
+        const fetchQuiz = async () => {
+            try {
+                const token = localStorage.getItem("token");
+                const res = await API.get(`/quiz/${quizId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                setTitle(res.data.title);
+                setQuestions(res.data.questions);
+                setTimer(res.data.timer);
+                setSubject(res.data.subject);
+            } catch (err) {
+                setPopup({ message: err.response?.data?.msg || "Error loading quiz", type: "error" });
+            }
+        };
+        fetchQuiz();
+    }, [quizId]);
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
@@ -36,7 +54,7 @@ function CreateQuiz() {
                                 answer: validCorrectIndex,
                             };
                         });
-                    setQuestions((prev) => [...prev, ...formatted]);
+                    setQuestions(formatted);
                     if (fileInputRef.current) {
                         fileInputRef.current.value = "";
                     }
@@ -111,33 +129,14 @@ function CreateQuiz() {
         try {
             const token = localStorage.getItem("token");
             await API.post(
-                "/quiz/create",
-                { subject, title, questions: validQuestions, timer, isVisible: false },
+                `/quiz/update/${quizId}`,
+                { subject, title, questions: validQuestions, timer },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            setPopup({ message: "Quiz Created! It is hidden by default. Go to Home to make it visible.", type: "success", confirmAction: null, confirmInput: "" });
-            setSubject("");
-            setTitle("");
-            setQuestions([]);
-            setTimer(5);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-            }
+            setPopup({ message: "Quiz Updated!", type: "success", confirmAction: null, confirmInput: "" });
         } catch (err) {
-            setPopup({ message: err.response?.data?.msg || "Failed to create quiz", type: "error", confirmAction: null, confirmInput: "" });
+            setPopup({ message: err.response?.data?.msg || "Failed to update quiz", type: "error", confirmAction: null, confirmInput: "" });
         }
-    };
-
-    const importGeneratedQuestions = (generatedQuestions) => {
-        const formattedQuestions = generatedQuestions.map((q) => ({
-            question: q.question,
-            options: [q.optionA, q.optionB, q.optionC, q.optionD],
-            answer: parseInt(q.correct, 10) - 1,
-        }));
-        setQuestions((prev) => [...prev, ...formattedQuestions]);
-        setSubject(generatedQuestions[0]?.subject || subject);
-        setIsChatbotOpen(false);
-        setPopup({ message: "Questions imported to form!", type: "success", confirmAction: null, confirmInput: "" });
     };
 
     const closePopup = () => {
@@ -145,7 +144,7 @@ function CreateQuiz() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 p-2 sm:p-4 md:p-5">
+        <div className="min-h-screen bg-gray-50 p-2 sm:p-4 md:p-5">
             <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-2 sm:p-4 md:p-5">
                 <Popup
                     message={popup.message}
@@ -157,7 +156,7 @@ function CreateQuiz() {
                 />
                 <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                     <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
-                        <i className="fas fa-plus text-base sm:text-lg"></i> Create Quiz
+                        <i className="fas fa-pen-to-square text-base sm:text-lg"></i> Edit Quiz
                     </h2>
                     <div>
                         <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Subject</label>
@@ -336,21 +335,13 @@ function CreateQuiz() {
                             type="submit"
                             className="w-auto px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 text-xs sm:text-sm"
                         >
-                            Create Quiz
+                            Update Quiz
                         </button>
                     </div>
                 </form>
-                <button
-                    onClick={() => setIsChatbotOpen(!isChatbotOpen)}
-                    className="fixed bottom-4 right-4 bg-blue-500 text-white p-2 sm:p-3 rounded-full shadow-md hover:bg-blue-600 z-50 text-base"
-                    title="AI Quiz Generator"
-                >
-                    <i className="fas fa-robot"></i>
-                </button>
-                {isChatbotOpen && <AIChatbot onClose={() => setIsChatbotOpen(false)} importQuestions={importGeneratedQuestions} />}
             </div>
         </div>
     );
 }
 
-export default CreateQuiz;
+export default EditQuiz;

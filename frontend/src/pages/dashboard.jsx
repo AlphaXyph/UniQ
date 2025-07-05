@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import Home from "./dashboard/Home";
-import AllReports from "./dashboard/AllReports";
-import Result from "./dashboard/Result";
-import CreateQuiz from "./dashboard/CreateQuiz";
-import Profile from "./dashboard/Profile";
-import AttemptQuiz from "./dashboard/AttemptQuiz";
-import EditQuiz from "./dashboard/EditQuiz";
-import QuizReport from "./dashboard/QuizReport";
-import UserManagement from "./dashboard/UserManagement";
-import Popup from "../components/Popup";
+import Home from "./dashboard/home";
+import AllReports from "./dashboard/allReports";
+import Result from "./dashboard/result";
+import CreateQuiz from "./dashboard/createQuiz";
+import Profile from "./dashboard/profile";
+import AttemptQuiz from "./dashboard/attemptQuiz";
+import EditQuiz from "./dashboard/editQuiz";
+import QuizReport from "./dashboard/quizReport";
+import UserManagement from "./dashboard/userManagement";
+import Popup from "../components/popup";
 import api from "../../api";
 
 function Dashboard() {
@@ -153,7 +153,7 @@ function Dashboard() {
             return;
         }
         try {
-            await navigator.clipboard.writeText(`http://localhost:5173${adminUrlData.url}`);
+            await navigator.clipboard.writeText(`${import.meta.env.VITE_BASE_URL}${adminUrlData.url}`);
             setPopup({ message: "Admin URL copied to clipboard", type: "success" });
         } catch (err) {
             console.error("Dashboard: Error copying URL:", err);

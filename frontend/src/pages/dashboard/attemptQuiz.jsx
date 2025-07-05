@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API from "../../../api";
-import Popup from "../../components/Popup";
+import Popup from "../../components/popup";
 
 function AttemptQuiz({ setIsQuizActive }) {
     const { quizId } = useParams();

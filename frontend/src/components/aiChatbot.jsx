@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import Popup from "./Popup";
+import Popup from "./popup";
 
 const AIChatbot = ({ onClose, importQuestions }) => {
     const [apiKey, setApiKey] = useState(localStorage.getItem("geminiApiKey") || "");

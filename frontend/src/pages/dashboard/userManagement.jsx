@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Popup from "../../components/Popup";
+import Popup from "../../components/popup";
 import API from "../../../api";
 
 function UserManagement() {

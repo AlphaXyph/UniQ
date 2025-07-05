@@ -1,36 +1,43 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import API from "../../api";
-import Popup from "../components/Popup";
+import Popup from "../components/popup";
 
-function Register() {
+function AdminRegister() {
+    const { randomString } = useParams();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [name, setName] = useState("");
     const [surname, setSurname] = useState("");
-    const [branch, setBranch] = useState("");
-    const [division, setDivision] = useState("");
-    const [rollNo, setRollNo] = useState("");
-    const [year, setYear] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success" });
+    const [isValidUrl, setIsValidUrl] = useState(null); // null = loading, true = valid, false = invalid
     const navigate = useNavigate();
+
+    // Validate randomString on mount
+    useEffect(() => {
+        const validateUrl = async () => {
+            try {
+                console.log("AdminRegister: Validating randomString:", randomString);
+                await API.post("/auth/validate-admin-url", { randomString });
+                setIsValidUrl(true);
+                console.log("AdminRegister: URL is valid");
+            } catch (err) {
+                console.error("AdminRegister: URL validation error:", err.response?.data || err.message);
+                setIsValidUrl(false);
+                setPopup({ message: err.response?.data?.msg || "Invalid or expired registration URL", type: "error" });
+                // Redirect to login after 2 seconds
+                setTimeout(() => navigate("/"), 2000);
+            }
+        };
+        validateUrl();
+    }, [randomString, navigate]);
 
     const formatName = (value) => {
         if (!value) return value;
         const trimmed = value.trim();
         return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
-    };
-
-    const formatBranch = (value) => {
-        if (!value) return value;
-        return value.trim().toUpperCase();
-    };
-
-    const formatDivision = (value) => {
-        if (!value) return value;
-        return value.trim().toUpperCase();
     };
 
     const validateEmail = (email) => {
@@ -74,33 +81,6 @@ function Register() {
         return "";
     };
 
-    const validateBranch = (branch) => {
-        const trimmedBranch = branch.trim();
-        if (!trimmedBranch) return "Branch is required";
-        if (trimmedBranch.length > 4) return "Branch must be 4 characters or less";
-        return "";
-    };
-
-    const validateDivision = (division) => {
-        const trimmedDivision = division.trim();
-        if (!trimmedDivision) return "Division is required";
-        if (trimmedDivision.length > 2) return "Division must be 2 characters or less";
-        return "";
-    };
-
-    const validateRollNo = (rollNo) => {
-        const trimmedRollNo = rollNo.trim();
-        if (!trimmedRollNo) return "Roll No is required";
-        if (!/^\d{1,3}$/.test(trimmedRollNo) || parseInt(trimmedRollNo) > 999) return "Roll No must be a 3-digit number or less";
-        return "";
-    };
-
-    const validateYear = (year) => {
-        if (!year) return "Year is required";
-        if (!["FY", "SY", "TY", "FOURTH"].includes(year)) return "Invalid year";
-        return "";
-    };
-
     const handleRegister = async (e) => {
         e.preventDefault();
         const emailError = validateEmail(email);
@@ -108,12 +88,8 @@ function Register() {
         const confirmPasswordError = validateConfirmPassword(confirmPassword);
         const nameError = validateName(name);
         const surnameError = validateSurname(surname);
-        const branchError = validateBranch(branch);
-        const divisionError = validateDivision(division);
-        const rollNoError = validateRollNo(rollNo);
-        const yearError = validateYear(year);
 
-        const errors = [emailError, passwordError, confirmPasswordError, nameError, surnameError, branchError, divisionError, rollNoError, yearError].filter(Boolean);
+        const errors = [emailError, passwordError, confirmPasswordError, nameError, surnameError].filter(Boolean);
         if (errors.length) {
             setPopup({ message: errors.join("<br />"), type: "error" });
             return;
@@ -122,22 +98,19 @@ function Register() {
         const formattedData = {
             email: email.toLowerCase().trim(),
             password: password.trim(),
-            role: "user",
+            role: "admin",
             name: formatName(name),
             surname: formatName(surname),
-            branch: formatBranch(branch),
-            division: formatDivision(division),
-            rollNo: rollNo.trim(),
-            year,
+            randomString,
         };
 
         try {
-            await API.post("/auth/register", formattedData);
-            setPopup({ message: "Registered! Please login.", type: "success" });
+            await API.post("/auth/admin-register", formattedData);
+            setPopup({ message: "Admin registered! Please login.", type: "success" });
             setTimeout(() => navigate("/"), 2000);
         } catch (err) {
-            console.error("Register error:", err.response?.data || err.message);
-            setPopup({ message: err.response?.data?.msg || "Register failed", type: "error" });
+            console.error("Admin register error:", err.response?.data || err.message);
+            setPopup({ message: err.response?.data?.msg || "Admin registration failed", type: "error" });
         }
     };
 
@@ -145,12 +118,31 @@ function Register() {
         setPopup({ message: "", type: "success" });
     };
 
+    // Show loading state while validating
+    if (isValidUrl === null) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                <p className="text-gray-800 text-lg">Validating URL...</p>
+            </div>
+        );
+    }
+
+    // Show error state (will redirect after popup)
+    if (isValidUrl === false) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                <Popup message={popup.message} type={popup.type} onClose={closePopup} />
+            </div>
+        );
+    }
+
+    // Render form for valid URL
     return (
         <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
             <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} />
                 <h2 className="text-lg sm:text-xl font-bold text-gray-800 text-center flex items-center gap-2">
-                    <i className="fas fa-user-plus"></i> Register
+                    <i className="fas fa-user-plus"></i> Admin Register
                 </h2>
                 <form onSubmit={handleRegister} className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div className="col-span-full">
@@ -217,50 +209,6 @@ function Register() {
                             onChange={(e) => setSurname(e.target.value)}
                         />
                     </div>
-                    <div>
-                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Branch</label>
-                        <input
-                            type="text"
-                            placeholder="Branch (max 4 chars)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                            value={branch}
-                            onChange={(e) => setBranch(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Division</label>
-                        <input
-                            type="text"
-                            placeholder="Division (max 2 chars)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                            value={division}
-                            onChange={(e) => setDivision(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Roll Number</label>
-                        <input
-                            type="number"
-                            placeholder="Roll No (max 3 digits)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                            value={rollNo}
-                            onChange={(e) => setRollNo(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Year</label>
-                        <select
-                            value={year}
-                            onChange={(e) => setYear(e.target.value)}
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                        >
-                            <option value="">Select Year</option>
-                            <option value="FY">FY</option>
-                            <option value="SY">SY</option>
-                            <option value="TY">TY</option>
-                            <option value="FOURTH">FOURTH</option>
-                        </select>
-                    </div>
                     <div className="col-span-full flex justify-center">
                         <button
                             type="submit"
@@ -285,4 +233,4 @@ function Register() {
     );
 }
 
-export default Register;
+export default AdminRegister;
