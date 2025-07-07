@@ -265,7 +265,7 @@ function Dashboard() {
                         {role === "admin" && (
                             <div className="px-3 py-2 bg-gray-900 rounded-lg w-full">
                                 <p className="text-xs text-white truncate max-w-[85%]">
-                                    Admin URL:
+                                    Register Admin:
                                 </p>
                                 <p className="text-xs text-white max-w-[85%]">
                                     {adminUrlData.url || "Not set"}

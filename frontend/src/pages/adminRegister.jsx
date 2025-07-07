@@ -20,7 +20,7 @@ function AdminRegister() {
         const validateUrl = async () => {
             try {
                 console.log("AdminRegister: Validating randomString:", randomString);
-                await API.post("/auth/validate-admin-url", { randomString });
+                await API.post("/admin-register-url/validate-admin-url", { randomString });
                 setIsValidUrl(true);
                 console.log("AdminRegister: URL is valid");
             } catch (err) {
@@ -105,7 +105,7 @@ function AdminRegister() {
         };
 
         try {
-            await API.post("/auth/admin-register", formattedData);
+            await API.post("/admin-register-url/admin-register", formattedData);
             setPopup({ message: "Admin registered! Please login.", type: "success" });
             setTimeout(() => navigate("/"), 2000);
         } catch (err) {

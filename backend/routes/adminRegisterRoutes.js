@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
-const { getCurrentURL, regenerateURL, toggleActive } = require("../controllers/adminRegisterController");
+const { getCurrentURL, regenerateURL, toggleActive, validateAdminUrl, adminRegister } = require("../controllers/adminRegisterController");
 
 // Admin-only middleware
 const adminOnly = (req, res, next) => {
@@ -12,7 +12,9 @@ const adminOnly = (req, res, next) => {
 };
 
 // Routes
+router.post('/admin-register', adminRegister);
 router.get("/", authMiddleware, adminOnly, getCurrentURL);
+router.post('/validate-admin-url', validateAdminUrl);
 router.post("/regenerate", authMiddleware, adminOnly, regenerateURL);
 router.post("/toggle-active", authMiddleware, adminOnly, toggleActive);
 

@@ -6,6 +6,43 @@ function generateRandomString(length = 16) {
     return crypto.randomBytes(Math.ceil(length / 2)).toString("hex").slice(0, length);
 }
 
+
+// Admin register
+exports.adminRegister = async (req, res) => {
+    const { email, password, name, surname, randomString } = req.body;
+
+    try {
+        // Verify the randomString
+        const adminRegisterURL = await AdminRegisterURL.findOne({ randomString, isActive: true });
+        if (!adminRegisterURL || adminRegisterURL.expiresAt < Date.now()) {
+            return res.status(403).json({ msg: "Invalid or expired registration URL" });
+        }
+
+        // Check if email already exists
+        const exists = await User.findOne({ email });
+        if (exists) return res.status(400).json({ msg: "Email already registered" });
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Create new admin user
+        const newUser = new User({
+            email,
+            password: hashedPassword,
+            role: "admin",
+            name,
+            surname,
+        });
+        await newUser.save();
+
+        res.status(201).json({ msg: "Admin registered successfully" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: "Server error" });
+    }
+};
+
 // Get the current admin registration URL
 exports.getCurrentURL = async (req, res) => {
     try {
@@ -30,6 +67,22 @@ exports.getCurrentURL = async (req, res) => {
     } catch (err) {
         console.error("getCurrentURL: Error:", err.message, err.stack);
         res.status(500).json({ msg: "Server error", error: err.message });
+    }
+};
+
+// Validate admin URL
+exports.validateAdminUrl = async (req, res) => {
+    const { randomString } = req.body;
+
+    try {
+        const adminRegisterURL = await AdminRegisterURL.findOne({ randomString, isActive: true });
+        if (!adminRegisterURL || adminRegisterURL.expiresAt < Date.now()) {
+            return res.status(403).json({ msg: "Invalid or expired registration URL" });
+        }
+        res.status(200).json({ msg: "URL is valid" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: "Server error" });
     }
 };
 

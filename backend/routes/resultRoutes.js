@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const auth = require("../middleware/authMiddleware");
+const authMiddleware = require("../middleware/authMiddleware");
 const {
     submitQuiz,
     getUserResults,
@@ -8,9 +8,9 @@ const {
     getQuizReport,
 } = require("../controllers/resultController");
 
-router.post("/submit", auth, submitQuiz);
-router.get("/my", auth, getUserResults);
-router.get("/all", auth, getAllResults);
-router.get("/quiz/:quizId/report", auth, getQuizReport);
+router.post("/submit", authMiddleware, submitQuiz);
+router.get("/my", authMiddleware, getUserResults);
+router.get("/all", authMiddleware, getAllResults);
+router.get("/quiz/:quizId/report", authMiddleware, getQuizReport);
 
 module.exports = router;
