@@ -1,4 +1,6 @@
 const AdminRegisterURL = require("../models/adminRegisterURL");
+const User = require("../models/user");
+const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 
 // Generate a 16-character random string
