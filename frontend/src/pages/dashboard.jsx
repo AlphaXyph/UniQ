@@ -212,7 +212,7 @@ function Dashboard() {
             {!isQuizActive && (
                 <nav
                     className={`${menuOpen ? "translate-x-0" : "-translate-x-full"
-                        } md:hidden bg-gray-800 text-white px-3 pt-[4.5rem] pb-1 flex flex-col gap-3 shadow-md fixed top-0 left-0 z-10 w-64 h-screen transition-transform duration-300 ease-in-out overflow-y-auto`}
+                        } md:hidden bg-gray-800 text-white px-3 pt-[4.5rem] pb-4 flex flex-col gap-3 shadow-md fixed top-0 left-0 z-10 w-64 h-[100svh] max-h-[100svh] transition-transform duration-300 ease-in-out overflow-y-auto`}
                 >
                     <div className="flex flex-col gap-2">
                         <Link
@@ -261,11 +261,11 @@ function Dashboard() {
                             </Link>
                         )}
                     </div>
-                    <div className="mt-auto flex flex-col gap-2 pt-2 border-t border-gray-700">
+                    <div className="mt-auto flex flex-col gap-2 pt-2 border-t border-gray-700 min-h-[120px]">
                         {role === "admin" && (
                             <div className="px-3 py-2 bg-gray-900 rounded-lg w-full">
-                                <p className="text-xs text-white truncate max-w-[85%]">
-                                    Register Admin:
+                                <p className="text-xs text-green-300 truncate max-w-[85%]">
+                                    Admin URL:
                                 </p>
                                 <p className="text-xs text-white max-w-[85%]">
                                     {adminUrlData.url || "Not set"}
@@ -379,7 +379,7 @@ function Dashboard() {
                             </Link>
                         )}
                     </nav>
-                    <div className="mt-auto flex flex-col gap-2 pt-4 border-t border-gray-700">
+                    <div className="mt-auto flex flex-col gap-2 pt-4 border-t border-gray-700 min-h-[120px]">
                         {role === "admin" && (
                             <div className="px-3 py-2 bg-gray-900 rounded-lg w-full">
                                 <p className="text-xs text-green-300 truncate max-w-[85%]">
