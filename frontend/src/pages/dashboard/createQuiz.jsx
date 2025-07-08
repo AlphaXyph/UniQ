@@ -144,6 +144,23 @@ function CreateQuiz() {
         setPopup({ message: "", type: "success", confirmAction: null, confirmInput: "" });
     };
 
+    // Sample CSV content for download
+    const sampleCsvContent = `question,optionA,optionB,optionC,optionD,correct
+"What is the capital of France?","Paris","London","Berlin","Madrid",1
+"What is 2 + 2?","3","4","5","6",2`;
+
+    const handleDownloadSample = () => {
+        const blob = new Blob([sampleCsvContent], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "Sample.csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="min-h-screen bg-gray-100 p-2 sm:p-4 md:p-5">
             <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-2 sm:p-4 md:p-5">
@@ -248,16 +265,25 @@ function CreateQuiz() {
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Upload Questions (CSV)</label>
-                        <label className="inline-block w-auto px-3 py-2 bg-blue-500 text-white rounded-md cursor-pointer hover:bg-blue-600 text-xs sm:text-sm text-center">
-                            Upload CSV
-                            <input
-                                type="file"
-                                accept=".csv"
-                                onChange={handleFileUpload}
-                                className="hidden"
-                                ref={fileInputRef}
-                            />
-                        </label>
+                        <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+                            <label className="inline-block w-auto px-3 py-2 bg-blue-500 text-white rounded-md cursor-pointer hover:bg-blue-600 text-xs sm:text-sm text-center">
+                                <i className="fa-solid fa-arrow-up-from-bracket mr-1"></i> Upload CSV
+                                <input
+                                    type="file"
+                                    accept=".csv"
+                                    onChange={handleFileUpload}
+                                    className="hidden"
+                                    ref={fileInputRef}
+                                />
+                            </label>
+                            <button
+                                type="button"
+                                className="inline-block w-auto px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs sm:text-sm text-center"
+                                onClick={handleDownloadSample}
+                            >
+                                <i className="fa-solid fa-download mr-1"></i> Sample.csv
+                            </button>
+                        </div>
                     </div>
                     {questions.length > 0 ? (
                         questions.map((q, i) => (
@@ -330,7 +356,7 @@ function CreateQuiz() {
                             className="w-auto px-3 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 text-xs sm:text-sm"
                             onClick={handleAddQuestion}
                         >
-                            <i className="fas fa-plus"></i> Add Question
+                            <i className="fas fa-plus mr-1"></i> Add Question
                         </button>
                         <button
                             type="submit"

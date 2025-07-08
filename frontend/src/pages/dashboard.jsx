@@ -28,22 +28,22 @@ function Dashboard() {
 
     const fetchAdminUrl = useCallback(async () => {
         try {
-            console.log("Dashboard: Fetching admin URL...");
+            console.log("Dashboard: Fetching Admin Register URL...");
             const response = await api.get("/admin-register-url");
-            console.log("Dashboard: Admin URL response:", response.data);
+            console.log("Dashboard: Admin Register URL response:", response.data);
             setAdminUrlData(response.data);
             setTimeLeft("");
             setIsExpired(false);
             return true;
         } catch (err) {
-            console.error("Dashboard: Error fetching admin URL:", err.response?.data || err.message);
+            console.error("Dashboard: Error fetching Admin Register URL:", err.response?.data || err.message);
             if (err.response?.status === 401) {
                 setPopup({ message: "Session expired, please log in again", type: "error" });
                 localStorage.removeItem("token");
                 localStorage.removeItem("user");
                 setTimeout(() => navigate("/"), 2000);
             } else {
-                setPopup({ message: err.response?.data?.msg || "Failed to fetch admin URL", type: "error" });
+                setPopup({ message: err.response?.data?.msg || "Failed to fetch Admin Register URL", type: "error" });
             }
             return false;
         }
@@ -51,23 +51,23 @@ function Dashboard() {
 
     const regenerateUrl = useCallback(async () => {
         try {
-            console.log("Dashboard: Regenerating admin URL...");
+            console.log("Dashboard: Regenerating Admin Register URL...");
             const response = await api.post("/admin-register-url/regenerate");
             console.log("Dashboard: Regenerate URL response:", response.data);
             setAdminUrlData(response.data);
             setIsExpired(false);
-            setPopup({ message: "Admin URL regenerated successfully", type: "success" });
+            setPopup({ message: "Admin Register URL regenerated successfully", type: "success" });
             setTimeLeft("");
             return true;
         } catch (err) {
-            console.error("Dashboard: Error regenerating admin URL:", err.response?.data || err.message);
+            console.error("Dashboard: Error regenerating Admin Register URL:", err.response?.data || err.message);
             if (err.response?.status === 401) {
                 setPopup({ message: "Session expired, please log in again", type: "error" });
                 localStorage.removeItem("token");
                 localStorage.removeItem("user");
                 setTimeout(() => navigate("/"), 2000);
             } else {
-                setPopup({ message: err.response?.data?.msg || "Failed to regenerate admin URL", type: "error" });
+                setPopup({ message: err.response?.data?.msg || "Failed to regenerate Admin Register URL", type: "error" });
             }
             return false;
         }
@@ -103,10 +103,10 @@ function Dashboard() {
                     regenerateUrl().then((success) => {
                         if (success) {
                             console.log("Dashboard: URL regenerated successfully");
-                            setPopup({ message: "Admin URL regenerated automatically", type: "success" });
+                            setPopup({ message: "Admin Register URL regenerated automatically", type: "success" });
                         } else {
                             console.error("Dashboard: Failed to regenerate URL on expiration");
-                            setPopup({ message: "Failed to regenerate admin URL", type: "error" });
+                            setPopup({ message: "Failed to regenerate Admin Register URL", type: "error" });
                         }
                     });
                 }
@@ -154,7 +154,7 @@ function Dashboard() {
         }
         try {
             await navigator.clipboard.writeText(`${import.meta.env.VITE_BASE_URL}${adminUrlData.url}`);
-            setPopup({ message: "Admin URL copied to clipboard", type: "success" });
+            setPopup({ message: "Admin Register URL copied to clipboard", type: "success" });
         } catch (err) {
             console.error("Dashboard: Error copying URL:", err);
             setPopup({ message: "Failed to copy URL", type: "error" });
@@ -265,7 +265,7 @@ function Dashboard() {
                         {role === "admin" && (
                             <div className="px-3 py-2 bg-gray-900 rounded-lg w-full">
                                 <p className="text-xs text-green-300 truncate max-w-[85%]">
-                                    Admin URL:
+                                    Admin Register URL:
                                 </p>
                                 <p className="text-xs text-white max-w-[85%]">
                                     {adminUrlData.url || "Not set"}
@@ -277,7 +277,7 @@ function Dashboard() {
                                     <button
                                         onClick={fetchAdminUrl}
                                         className="text-green-300 hover:text-green-400 text-sm transition-colors duration-200 w-5 text-center"
-                                        title="Get Admin URL"
+                                        title="Get Admin Register URL"
                                     >
                                         <i className="fa-solid fa-link"></i>
                                     </button>
@@ -285,7 +285,7 @@ function Dashboard() {
                                         onClick={copyUrl}
                                         className={`text-green-300 hover:text-green-400 text-sm transition-colors duration-200 w-5 text-center ${!adminUrlData.url ? "opacity-50 cursor-not-allowed" : ""
                                             }`}
-                                        title="Copy Admin URL"
+                                        title="Copy Admin Register URL"
                                         disabled={!adminUrlData.url}
                                     >
                                         <i className="fa-solid fa-copy"></i>
@@ -383,7 +383,7 @@ function Dashboard() {
                         {role === "admin" && (
                             <div className="px-3 py-2 bg-gray-900 rounded-lg w-full">
                                 <p className="text-xs text-green-300 truncate max-w-[85%]">
-                                    Admin URL:
+                                    Admin Register URL:
                                 </p>
                                 <p className="text-xs text-white max-w-[85%]">
                                     {adminUrlData.url || "Not set"}
@@ -395,7 +395,7 @@ function Dashboard() {
                                     <button
                                         onClick={fetchAdminUrl}
                                         className="text-green-300 hover:text-green-400 text-sm transition-colors duration-200 w-5 text-center"
-                                        title="Get Admin URL"
+                                        title="Get Admin Register URL"
                                     >
                                         <i className="fa-solid fa-link"></i>
                                     </button>
@@ -403,7 +403,7 @@ function Dashboard() {
                                         onClick={copyUrl}
                                         className={`text-green-300 hover:text-green-400 text-sm transition-colors duration-200 w-5 text-center ${!adminUrlData.url ? "opacity-50 cursor-not-allowed" : ""
                                             }`}
-                                        title="Copy Admin URL"
+                                        title="Copy Admin Register URL"
                                         disabled={!adminUrlData.url}
                                     >
                                         <i className="fa-solid fa-copy"></i>
