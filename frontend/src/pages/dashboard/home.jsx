@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Popup from "../../components/popup";
 import API from "../../../api";
@@ -13,22 +13,26 @@ function Home() {
     const userEmail = user?.email;
     const navigate = useNavigate();
 
-    const fetchQuizzes = async () => {
+    const fetchQuizzes = useCallback(async () => {
         try {
             const token = localStorage.getItem("token");
             const res = await API.get("/quiz/all", {
                 headers: { Authorization: `Bearer ${token}` },
             });
             console.log("Fetched quizzes:", res.data);
+            // Log quiz details once after fetching
+            res.data.forEach((q) => {
+                console.log("Quiz:", q._id, "Created by email:", q.createdBy?.email, "User email:", userEmail);
+            });
             setQuizzes(res.data || []);
         } catch (err) {
             setPopup({ message: err.response?.data?.msg || "Error loading quizzes", type: "error" });
         }
-    };
+    }, [userEmail]);
 
     useEffect(() => {
         fetchQuizzes();
-    }, []);
+    }, [fetchQuizzes]);
 
     const groupedQuizzes = useMemo(() => {
         const grouped = quizzes
@@ -128,84 +132,81 @@ function Home() {
                                 {date}
                             </h3>
                             <ul className="space-y-2">
-                                {groupedQuizzes.grouped[date].map((q) => {
-                                    console.log("Quiz:", q._id, "Created by email:", q.createdBy?.email, "User email:", userEmail);
-                                    return (
-                                        <li
-                                            key={q._id}
-                                            className="p-2 sm:p-3 bg-white rounded-md border border-gray-300 shadow-sm hover:shadow-md transition-shadow"
-                                        >
-                                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                                <div className="flex-1">
-                                                    <strong className="text-sm sm:text-base font-bold text-gray-800 break-words">
-                                                        {q.subject} - {q.title}
-                                                    </strong>
-                                                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5 break-words">
-                                                        Posted by: {q.createdBy?.email || "Unknown"}
-                                                    </p>
-                                                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                                                        Questions: {q.questions?.length || 0} | Time: {q.timer} min
-                                                        {role === "admin" && (
-                                                            <span> | Status: {q.isVisible ? "Visible" : "Hidden"}</span>
-                                                        )}
-                                                    </p>
-                                                    {role === "user" && q.isVisible && !q.hasAttempted ? (
+                                {groupedQuizzes.grouped[date].map((q) => (
+                                    <li
+                                        key={q._id}
+                                        className="p-2 sm:p-3 bg-white rounded-md border border-gray-300 shadow-sm hover:shadow-md transition-shadow"
+                                    >
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                                            <div className="flex-1">
+                                                <strong className="text-sm sm:text-base font-bold text-gray-800 break-words">
+                                                    {q.subject} - {q.title}
+                                                </strong>
+                                                <p className="text-xs sm:text-sm text-gray-500 mt-0.5 break-words">
+                                                    Posted by: {q.createdBy?.email || "Unknown"}
+                                                </p>
+                                                <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+                                                    Questions: {q.questions?.length || 0} | Time: {q.timer} min
+                                                    {role === "admin" && (
+                                                        <span> | Status: {q.isVisible ? "Visible" : "Hidden"}</span>
+                                                    )}
+                                                </p>
+                                                {role === "user" && q.isVisible && !q.hasAttempted ? (
+                                                    <Link
+                                                        to={`/dashboard/attempt/${q._id}`}
+                                                        className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium mt-1 inline-block"
+                                                    >
+                                                        Attempt Quiz
+                                                    </Link>
+                                                ) : role === "user" && q.isVisible && q.hasAttempted ? (
+                                                    <span className="text-green-500 text-xs sm:text-sm mt-1 inline-block">
+                                                        <strong>Quiz Attempted</strong>
+                                                    </span>
+                                                ) : role === "admin" ? (
+                                                    <div className="flex gap-2 mt-1">
                                                         <Link
                                                             to={`/dashboard/attempt/${q._id}`}
-                                                            className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium mt-1 inline-block"
+                                                            className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium"
                                                         >
-                                                            Attempt Quiz
+                                                            View Quiz
                                                         </Link>
-                                                    ) : role === "user" && q.isVisible && q.hasAttempted ? (
-                                                        <span className="text-green-500 text-xs sm:text-sm mt-1 inline-block">
-                                                            <strong>Quiz Attempted</strong>
-                                                        </span>
-                                                    ) : role === "admin" ? (
-                                                        <div className="flex gap-2 mt-1">
-                                                            <Link
-                                                                to={`/dashboard/attempt/${q._id}`}
-                                                                className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium"
-                                                            >
-                                                                View Quiz
-                                                            </Link>
-                                                            <Link
-                                                                to={`/dashboard/quiz/${q._id}/report`}
-                                                                className="text-green-600 hover:text-green-700 text-xs sm:text-sm font-medium"
-                                                            >
-                                                                View Report
-                                                            </Link>
-                                                        </div>
-                                                    ) : null}
-                                                </div>
-                                                {role === "admin" && q.createdBy?.email === userEmail && (
-                                                    <div className="flex sm:flex-col gap-1 sm:gap-2 mt-2 sm:mt-0 sm:ml-2">
-                                                        <button
-                                                            onClick={() => handleToggleVisibility(q._id, q.isVisible)}
-                                                            className={`text-${q.isVisible ? "gray" : "black"}-500 hover:text-${q.isVisible ? "gray" : "black"}-600 text-base p-1 rounded-full hover:bg-gray-100 transition`}
-                                                            title={q.isVisible ? "Hide Quiz" : "Show Quiz"}
+                                                        <Link
+                                                            to={`/dashboard/quiz/${q._id}/report`}
+                                                            className="text-green-600 hover:text-green-700 text-xs sm:text-sm font-medium"
                                                         >
-                                                            <i className={`fas ${q.isVisible ? "fa-eye" : "fa-eye-slash"}`}></i>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleEdit(q._id)}
-                                                            className="text-blue-500 hover:text-blue-700 text-base p-1 rounded-full hover:bg-gray-100 transition"
-                                                            title="Edit Quiz"
-                                                        >
-                                                            <i className="fas fa-edit"></i>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setDeleteConfirm({ show: true, quizId: q._id })}
-                                                            className="text-red-500 hover:text-red-700 text-base p-1 rounded-full hover:bg-gray-100 transition"
-                                                            title="Delete Quiz"
-                                                        >
-                                                            <i className="fas fa-trash"></i>
-                                                        </button>
+                                                            View Report
+                                                        </Link>
                                                     </div>
-                                                )}
+                                                ) : null}
                                             </div>
-                                        </li>
-                                    );
-                                })}
+                                            {role === "admin" && q.createdBy?.email === userEmail && (
+                                                <div className="flex sm:flex-col gap-1 sm:gap-2 mt-2 sm:mt-0 sm:ml-2">
+                                                    <button
+                                                        onClick={() => handleToggleVisibility(q._id, q.isVisible)}
+                                                        className={`text-${q.isVisible ? "gray" : "black"}-500 hover:text-${q.isVisible ? "gray" : "black"}-600 text-base p-1 rounded-full hover:bg-gray-100 transition`}
+                                                        title={q.isVisible ? "Hide Quiz" : "Show Quiz"}
+                                                    >
+                                                        <i className={`fas ${q.isVisible ? "fa-eye" : "fa-eye-slash"}`}></i>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleEdit(q._id)}
+                                                        className="text-blue-500 hover:text-blue-700 text-base p-1 rounded-full hover:bg-gray-100 transition"
+                                                        title="Edit Quiz"
+                                                    >
+                                                        <i className="fas fa-edit"></i>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setDeleteConfirm({ show: true, quizId: q._id })}
+                                                        className="text-red-500 hover:text-red-700 text-base p-1 rounded-full hover:bg-gray-100 transition"
+                                                        title="Delete Quiz"
+                                                    >
+                                                        <i className="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </li>
+                                ))}
                             </ul>
                         </div>
                     )

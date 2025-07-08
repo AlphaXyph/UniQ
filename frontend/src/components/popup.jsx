@@ -3,9 +3,11 @@ import React, { useEffect } from "react";
 const Popup = ({ message, type, onClose, confirmAction, confirmInput, setConfirmInput }) => {
     useEffect(() => {
         if (message && !confirmAction) {
+            console.log("Popup: Displaying message:", message);
             const timer = setTimeout(() => {
+                console.log("Popup: Auto-closing and triggering onClose");
                 onClose();
-            }, 5000);
+            }, 3000);
             return () => clearTimeout(timer);
         }
     }, [message, onClose, confirmAction]);
@@ -20,7 +22,10 @@ const Popup = ({ message, type, onClose, confirmAction, confirmInput, setConfirm
             >
                 <button
                     className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 text-sm sm:text-base font-bold"
-                    onClick={onClose}
+                    onClick={() => {
+                        console.log("Popup: Manual close triggered");
+                        onClose();
+                    }}
                     aria-label="Close popup"
                 >
                     <i className="fas fa-times"></i>
