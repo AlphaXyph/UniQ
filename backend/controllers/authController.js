@@ -3,6 +3,8 @@ const Quiz = require("../models/quiz");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const Otp = require("../models/otp");
+const sendEmail = require("../configs/sendEmail")
 
 // Generate a 16-character random string
 function generateRandomString(length = 16) {
@@ -62,6 +64,70 @@ exports.login = async (req, res) => {
             },
         });
     } catch (err) {
+        res.status(500).json({ msg: "Server error" });
+    }
+};
+
+// Request OTP for password reset
+exports.requestPasswordReset = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ msg: "User not found" });
+        }
+
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const hashedOtp = await bcrypt.hash(otp, 10);
+
+        // Save OTP to database
+        await Otp.create({ email, otp: hashedOtp });
+
+        // Send OTP via email
+        const subject = "UniQ Password Reset OTP";
+        const text = `Your OTP for password reset is: ${otp}. It is valid for 10 minutes.`;
+        await sendEmail(email, subject, text);
+
+        res.status(200).json({ msg: "OTP sent to your email" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: "Server error" });
+    }
+};
+
+// Verify OTP and reset password
+exports.resetPassword = async (req, res) => {
+    try {
+        const { email, otp, newPassword } = req.body;
+
+        // Find OTP record
+        const otpRecord = await Otp.findOne({ email });
+        if (!otpRecord) {
+            return res.status(400).json({ msg: "OTP not found or expired" });
+        }
+
+        // Verify OTP
+        const isMatch = await bcrypt.compare(otp, otpRecord.otp);
+        if (!isMatch) {
+            return res.status(400).json({ msg: "Invalid OTP" });
+        }
+
+        // Validate new password
+        if (newPassword.length < 8) {
+            return res.status(400).json({ msg: "Password must be at least 8 characters long" });
+        }
+
+        // Update user password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await User.findOneAndUpdate({ email }, { password: hashedPassword });
+
+        // Delete OTP record
+        await Otp.deleteOne({ email });
+
+        res.status(200).json({ msg: "Password reset successfully" });
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ msg: "Server error" });
     }
 };
