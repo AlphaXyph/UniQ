@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import Popup from "../../components/popup";
-import API from "../../../api";
+import Popup from "../../../components/popup";
+import API from "../../../../api";
 
 function Home() {
     const [quizzes, setQuizzes] = useState([]);

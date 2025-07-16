@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import Home from "./dashboard/home";
-import AllReports from "./dashboard/allReports";
-import Result from "./dashboard/result";
-import CreateQuiz from "./dashboard/createQuiz";
+import Home from "./dashboard/common/home";
+import AllReports from "./dashboard/admin/allReports";
+import Result from "./dashboard/user/result";
+import CreateQuiz from "./dashboard/admin/createQuiz";
 import Profile from "./dashboard/profile";
-import AttemptQuiz from "./dashboard/attemptQuiz";
-import EditQuiz from "./dashboard/editQuiz";
-import QuizReport from "./dashboard/quizReport";
+import AttemptQuiz from "./dashboard/user/attemptQuiz";
+import EditQuiz from "./dashboard/admin/editQuiz";
+import QuizReport from "./dashboard/admin/quizReport";
 import UserManagement from "./dashboard/userManagement";
+import ViewAnswers from "./dashboard/viewAnswers";
 import Popup from "../components/popup";
 import api from "../../api";
 
@@ -471,6 +472,7 @@ function Dashboard() {
                             path="users"
                             element={role === "admin" ? <UserManagement /> : <Navigate to="/dashboard" />}
                         />
+                        <Route path="view-answers/:resultId" element={<ViewAnswers />} />
                     </Routes>
                 </div>
             </main>

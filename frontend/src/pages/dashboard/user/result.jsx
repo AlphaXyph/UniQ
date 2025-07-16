@@ -1,25 +1,46 @@
 import React, { useEffect, useState } from "react";
-import API from "../../../api";
-import Popup from "../../components/popup";
+import { Link } from "react-router-dom";
+import API from "../../../../api";
+import Popup from "../../../components/popup";
 
 function Result() {
     const [results, setResults] = useState([]);
+    const [canViewAnswersMap, setCanViewAnswersMap] = useState({});
     const [popup, setPopup] = useState({ message: "", type: "success" });
     const [searchTerm, setSearchTerm] = useState("");
 
     useEffect(() => {
-        const fetch = async () => {
+        const fetchResults = async () => {
             try {
                 const token = localStorage.getItem("token");
                 const res = await API.get("/result/my", {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 setResults(res.data);
+
+                // Fetch canViewAnswers status for each result
+                const viewAnswersPromises = res.data.map(async (result) => {
+                    try {
+                        const response = await API.get(`/result/can-view-answers/${result._id}`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                        });
+                        return { id: result._id, canView: response.data.canView };
+                    } catch (err) {
+                        console.error(`Error checking view answers for result ${result._id}:`, err);
+                        return { id: result._id, canView: false };
+                    }
+                });
+                const viewAnswersResults = await Promise.all(viewAnswersPromises);
+                const viewAnswersMap = viewAnswersResults.reduce((acc, { id, canView }) => {
+                    acc[id] = canView;
+                    return acc;
+                }, {});
+                setCanViewAnswersMap(viewAnswersMap);
             } catch (err) {
                 setPopup({ message: err.response?.data?.msg || "Error loading results", type: "error" });
             }
         };
-        fetch();
+        fetchResults();
     }, []);
 
     const closePopup = () => {
@@ -99,24 +120,34 @@ function Result() {
                                 {filteredResults[date].map((r) => (
                                     <li
                                         key={r._id}
-                                        className="p-2 sm:p-3 bg-gray-50 rounded-md shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-3 text-xs sm:text-sm"
+                                        className="p-2 sm:p-3 bg-gray-50 rounded-md shadow-md flex flex-col gap-2 text-xs sm:text-sm"
                                     >
-                                        <div>
-                                            In <strong>{r.quiz?.subject || "No Subject"}</strong> -{" "}
-                                            <strong>{r.quiz?.title || "Deleted Quiz"}</strong> you scored{" "}
-                                            <span className={getScoreColor(r.score, r.total)}>
-                                                {r.score}/{r.total}
+                                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                            <div>
+                                                In <strong>{r.quiz?.subject || "No Subject"}</strong> -{" "}
+                                                <strong>{r.quiz?.title || "Deleted Quiz"}</strong> you scored{" "}
+                                                <span className={getScoreColor(r.score, r.total)}>
+                                                    {r.score}/{r.total}
+                                                </span>
+                                            </div>
+                                            <span className="text-xs text-gray-500">
+                                                {r.createdAt
+                                                    ? new Date(r.createdAt).toLocaleTimeString("en-US", {
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                        hour12: true,
+                                                    })
+                                                    : "N/A"}
                                             </span>
                                         </div>
-                                        <span className="text-xs text-gray-500">
-                                            {r.createdAt
-                                                ? new Date(r.createdAt).toLocaleTimeString("en-US", {
-                                                    hour: "2-digit",
-                                                    minute: "2-digit",
-                                                    hour12: true,
-                                                })
-                                                : "N/A"}
-                                        </span>
+                                        {canViewAnswersMap[r._id] && (
+                                            <Link
+                                                to={`/dashboard/view-answers/${r._id}`}
+                                                className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm flex items-center gap-1 w-fit"
+                                            >
+                                                <i className="fa-solid fa-magnifying-glass"></i> View Answers
+                                            </Link>
+                                        )}
                                     </li>
                                 ))}
                             </ul>

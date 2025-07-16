@@ -1,8 +1,8 @@
 import React, { useState, useRef } from "react";
-import API from "../../../api";
+import API from "../../../../api";
 import Papa from "papaparse";
-import Popup from "../../components/popup";
-import AIChatbot from "../../components/aiChatbot";
+import Popup from "../../../components/popup";
+import AIChatbot from "../../../components/aiChatbot";
 
 function CreateQuiz() {
     const [title, setTitle] = useState("");

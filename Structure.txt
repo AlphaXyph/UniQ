@@ -34,6 +34,7 @@ UniQuiz/
 │   ├── models/                    # Database models
 │   │   ├── quiz.js                # Quiz model
 │   │   ├── user.js                # User model
+│   │   ├── otp.js                 # OTP model
 │   │   ├── result.js              # Result model
 │   │   └── adminRegisterURL.js    # Model or utility for admin registration URL (new)
 │   │
@@ -53,7 +54,8 @@ UniQuiz/
 │   │   └── authMiddleware.js      # Authentication middleware (e.g., JWT)
 │   │
 │   ├── config/                    # Configuration files
-│   │   └── db.js                  # Database connection (e.g., MongoDB)
+│   │   ├── db.js                  # Database connection (e.g., MongoDB)
+│   │   └── sendEmail.js           # SMTP using nodemailer
 │   │
 │   ├── .env                       # Backend environment variables
 │   ├── server.js                  # Backend server entry point

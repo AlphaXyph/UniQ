@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import API from "../../../api";
-import Popup from "../../components/popup";
+import { Link } from "react-router-dom";
+import API from "../../../../api";
+import Popup from "../../../components/popup";
 
 function AllReports() {
     const [results, setResults] = useState([]);
@@ -18,6 +19,7 @@ function AllReports() {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const formattedResults = res.data.map((r) => ({
+                resultId: r._id,
                 rollNo: r.student?.rollNo || "N/A",
                 name: `${r.student?.name || "Unknown"} ${r.student?.surname || ""}`.trim(),
                 email: r.student?.email || "No Email",
@@ -242,32 +244,40 @@ function AllReports() {
                                 {groupedResults[date].map((entry, index) => (
                                     <li
                                         key={`${date}-${index}`}
-                                        className="p-2 sm:p-3 bg-gray-50 rounded-md shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-3 text-xs sm:text-sm"
+                                        className="p-2 sm:p-3 bg-gray-50 rounded-md shadow-md flex flex-col gap-2 text-xs sm:text-sm"
                                     >
-                                        <div>
-                                            <strong>{entry.rollNo}</strong>:{" "}
-                                            <span className="group relative">
-                                                <strong>{entry.name}</strong>
-                                                <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 -top-8 left-0 z-10">
-                                                    {entry.email || "No Email"}
-                                                </span>
-                                            </span>{" "}
-                                            from <strong>{entry.year}-{entry.branch}-{entry.division}</strong> attempted{" "}
-                                            <strong>
-                                                {entry.subject} - {entry.topic}
-                                            </strong>{" "}
-                                            and scored{" "}
-                                            <strong className={getScoreColor(entry.score)}>{entry.score}</strong>
+                                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                            <div>
+                                                <strong>{entry.rollNo}</strong>:{" "}
+                                                <span className="group relative">
+                                                    <strong>{entry.name}</strong>
+                                                    <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 -top-8 left-0 z-10">
+                                                        {entry.email || "No Email"}
+                                                    </span>
+                                                </span>{" "}
+                                                from <strong>{entry.year}-{entry.branch}-{entry.division}</strong> attempted{" "}
+                                                <strong>
+                                                    {entry.subject} - {entry.topic}
+                                                </strong>{" "}
+                                                and scored{" "}
+                                                <strong className={getScoreColor(entry.score)}>{entry.score}</strong>
+                                            </div>
+                                            <span className="text-xs text-gray-500">
+                                                {entry.createdAt
+                                                    ? new Date(entry.createdAt).toLocaleTimeString("en-US", {
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                        hour12: true,
+                                                    })
+                                                    : "N/A"}
+                                            </span>
                                         </div>
-                                        <span className="text-xs text-gray-500">
-                                            {entry.createdAt
-                                                ? new Date(entry.createdAt).toLocaleTimeString("en-US", {
-                                                    hour: "2-digit",
-                                                    minute: "2-digit",
-                                                    hour12: true,
-                                                })
-                                                : "N/A"}
-                                        </span>
+                                        <Link
+                                            to={`/dashboard/view-answers/${entry.resultId}`}
+                                            className="text-blue-600 hover:text-blue-800 mt-1 place-items-center text-xs sm:text-sm flex items-center gap-1 w-fit"
+                                        >
+                                            <i class="fa-solid fa-magnifying-glass"></i> View Answers
+                                        </Link>
                                     </li>
                                 ))}
                             </ul>

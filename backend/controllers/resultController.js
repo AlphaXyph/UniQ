@@ -6,7 +6,6 @@ const submitQuiz = async (req, res) => {
         const { quizId, answers } = req.body;
         const studentId = req.user.id;
 
-        // Check if the user has already submitted this quiz
         const existingResult = await Result.findOne({ student: studentId, quiz: quizId });
         if (existingResult) {
             return res.status(403).json({ msg: "You have already attempted this quiz" });
@@ -68,19 +67,17 @@ const getQuizReport = async (req, res) => {
         const { quizId } = req.params;
         const { sortBy = "name", order = "asc" } = req.query;
 
-        // Validate sortBy parameter
         const validSortFields = ["name", "rollNo", "division", "branch", "year"];
         if (!validSortFields.includes(sortBy)) {
             return res.status(400).json({ msg: "Invalid sort field" });
         }
 
-        // Map sortBy to MongoDB fields (name requires surname for secondary sorting)
         const sortFields = {
-            name: { name: order === "asc" ? 1 : -1, surname: order === "asc" ? 1 : -1 },
-            rollNo: { rollNo: order === "asc" ? 1 : -1 },
-            division: { division: order === "asc" ? 1 : -1 },
-            branch: { branch: order === "asc" ? 1 : -1 },
-            year: { year: order === "asc" ? 1 : -1 },
+            name: { "student.name": order === "asc" ? 1 : -1, "student.surname": order === "asc" ? 1 : -1 },
+            rollNo: { "student.rollNo": order === "asc" ? 1 : -1 },
+            division: { "student.division": order === "asc" ? 1 : -1 },
+            branch: { "student.branch": order === "asc" ? 1 : -1 },
+            year: { "student.year": order === "asc" ? 1 : -1 },
         };
 
         const results = await Result.find({ quiz: quizId })
@@ -91,6 +88,7 @@ const getQuizReport = async (req, res) => {
         const formattedResults = results
             .filter((r) => r.quiz && r.student)
             .map((r) => ({
+                resultId: r._id,
                 rollNo: r.student.rollNo || "N/A",
                 name: `${r.student.name || "Unknown"} ${r.student.surname || ""}`.trim(),
                 email: r.student.email || "No Email",
@@ -110,4 +108,76 @@ const getQuizReport = async (req, res) => {
     }
 };
 
-module.exports = { submitQuiz, getUserResults, getAllResults, getQuizReport };
+const getUserAnswer = async (req, res) => {
+    try {
+        const { resultId } = req.params;
+        const userId = req.user.id;
+        const userRole = req.user.role;
+
+        const result = await Result.findById(resultId)
+            .populate("quiz", "subject title questions")
+            .populate("student", "name surname email");
+
+        if (!result || !result.quiz || !result.student) {
+            return res.status(404).json({ msg: "Result or associated data not found" });
+        }
+
+        if (userRole !== "admin" && result.student._id.toString() !== userId) {
+            return res.status(403).json({ msg: "Unauthorized access to this result" });
+        }
+
+        const detailedAnswers = result.quiz.questions.map((question, index) => ({
+            question: question.question,
+            options: question.options,
+            correctAnswer: question.answer,
+            userAnswer: result.answers[index],
+            isCorrect: result.answers[index] !== undefined && result.answers[index] !== null ? question.answer === result.answers[index] : false,
+            isAnswered: result.answers[index] !== undefined && result.answers[index] !== null,
+        }));
+
+        const response = {
+            quizId: result.quiz._id,
+            quizTitle: result.quiz.title,
+            quizSubject: result.quiz.subject,
+            studentName: `${result.student.name} ${result.student.surname}`.trim(),
+            studentEmail: result.student.email,
+            score: result.score,
+            total: result.total,
+            answers: detailedAnswers,
+        };
+
+        res.json(response);
+    } catch (err) {
+        console.error("Get user answer error:", err.message, err.stack);
+        res.status(500).json({ msg: "Failed to fetch user answers" });
+    }
+};
+
+const canViewAnswers = async (req, res) => {
+    try {
+        const { resultId } = req.params;
+        const userId = req.user.id;
+        const userRole = req.user.role;
+
+        const result = await Result.findById(resultId);
+        if (!result) {
+            return res.status(404).json({ msg: "Result not found" });
+        }
+
+        if (userRole !== "admin" && result.student.toString() !== userId) {
+            return res.status(403).json({ msg: "Unauthorized access to this result" });
+        }
+
+        const submissionDate = new Date(result.createdAt);
+        const currentDate = new Date();
+        const sixHoursInMs = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+        const canView = currentDate - submissionDate >= sixHoursInMs;
+
+        res.json({ canView });
+    } catch (err) {
+        console.error("Can view answers error:", err.message, err.stack);
+        res.status(500).json({ msg: "Failed to check view answers permission" });
+    }
+};
+
+module.exports = { submitQuiz, getUserResults, getAllResults, getQuizReport, getUserAnswer, canViewAnswers };

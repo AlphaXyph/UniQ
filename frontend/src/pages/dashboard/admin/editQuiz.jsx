@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import API from "../../../api";
+import API from "../../../../api";
 import Papa from "papaparse";
-import Popup from "../../components/popup";
+import Popup from "../../../components/popup";
 
 function EditQuiz() {
     const { quizId } = useParams();
