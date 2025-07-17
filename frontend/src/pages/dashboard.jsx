@@ -4,12 +4,12 @@ import Home from "./dashboard/common/home";
 import AllReports from "./dashboard/admin/allReports";
 import Result from "./dashboard/user/result";
 import CreateQuiz from "./dashboard/admin/createQuiz";
-import Profile from "./dashboard/profile";
+import Profile from "./dashboard/common/profile";
 import AttemptQuiz from "./dashboard/user/attemptQuiz";
 import EditQuiz from "./dashboard/admin/editQuiz";
 import QuizReport from "./dashboard/admin/quizReport";
-import UserManagement from "./dashboard/userManagement";
-import ViewAnswers from "./dashboard/viewAnswers";
+import UserManagement from "./dashboard/admin/userManagement";
+import ViewAnswers from "./dashboard/common/viewAnswers";
 import Popup from "../components/popup";
 import api from "../../api";
 

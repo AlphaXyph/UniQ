@@ -15,6 +15,7 @@ function Register() {
     const [year, setYear] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success" });
+    const [errors, setErrors] = useState({});
     const navigate = useNavigate();
 
     const formatName = (value) => {
@@ -101,21 +102,26 @@ function Register() {
         return "";
     };
 
+    const validateForm = () => {
+        const newErrors = {
+            email: validateEmail(email),
+            password: validatePassword(password),
+            confirmPassword: validateConfirmPassword(confirmPassword),
+            name: validateName(name),
+            surname: validateSurname(surname),
+            branch: validateBranch(branch),
+            division: validateDivision(division),
+            rollNo: validateRollNo(rollNo),
+            year: validateYear(year),
+        };
+        setErrors(newErrors);
+        return Object.values(newErrors).every((error) => !error);
+    };
+
     const handleRegister = async (e) => {
         e.preventDefault();
-        const emailError = validateEmail(email);
-        const passwordError = validatePassword(password);
-        const confirmPasswordError = validateConfirmPassword(confirmPassword);
-        const nameError = validateName(name);
-        const surnameError = validateSurname(surname);
-        const branchError = validateBranch(branch);
-        const divisionError = validateDivision(division);
-        const rollNoError = validateRollNo(rollNo);
-        const yearError = validateYear(year);
-
-        const errors = [emailError, passwordError, confirmPasswordError, nameError, surnameError, branchError, divisionError, rollNoError, yearError].filter(Boolean);
-        if (errors.length) {
-            setPopup({ message: errors.join("<br />"), type: "error" });
+        if (!validateForm()) {
+            setPopup({ message: "Please fix the errors in the form", type: "error" });
             return;
         }
 
@@ -136,13 +142,13 @@ function Register() {
             setPopup({ message: "Registered! Please login.", type: "success" });
             setTimeout(() => navigate("/"), 2000);
         } catch (err) {
-            console.error("Register error:", err.response?.data || err.message);
             setPopup({ message: err.response?.data?.msg || "Register failed", type: "error" });
         }
     };
 
     const closePopup = () => {
         setPopup({ message: "", type: "success" });
+        setErrors({});
     };
 
     return (
@@ -158,19 +164,22 @@ function Register() {
                         <input
                             type="email"
                             placeholder="Email (must end with @ves.ac.in)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, email: validateEmail(email) })}
                         />
+                        {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                     </div>
                     <div className="relative">
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Password</label>
                         <input
                             type={showPassword ? "text" : "password"}
                             placeholder="Password (8+ chars, mixed case, number, special char)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.password ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, password: validatePassword(password) })}
                         />
                         <button
                             type="button"
@@ -179,15 +188,17 @@ function Register() {
                         >
                             <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
                         </button>
+                        {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                     </div>
                     <div className="relative">
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Confirm Password</label>
                         <input
                             type={showPassword ? "text" : "password"}
                             placeholder="Confirm Password"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.confirmPassword ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, confirmPassword: validateConfirmPassword(confirmPassword) })}
                         />
                         <button
                             type="button"
@@ -196,63 +207,75 @@ function Register() {
                         >
                             <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
                         </button>
+                        {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Name</label>
                         <input
                             type="text"
                             placeholder="Name (max 20 chars)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={name}
                             onChange={(e) => setName(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, name: validateName(name) })}
                         />
+                        {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Surname</label>
                         <input
                             type="text"
                             placeholder="Surname (max 20 chars)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.surname ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={surname}
                             onChange={(e) => setSurname(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, surname: validateSurname(surname) })}
                         />
+                        {errors.surname && <p className="text-red-500 text-xs mt-1">{errors.surname}</p>}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Branch</label>
                         <input
                             type="text"
                             placeholder="Branch (max 4 chars)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.branch ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={branch}
                             onChange={(e) => setBranch(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, branch: validateBranch(branch) })}
                         />
+                        {errors.branch && <p className="text-red-500 text-xs mt-1">{errors.branch}</p>}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Division</label>
                         <input
                             type="text"
                             placeholder="Division (max 2 chars)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.division ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={division}
                             onChange={(e) => setDivision(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, division: validateDivision(division) })}
                         />
+                        {errors.division && <p className="text-red-500 text-xs mt-1">{errors.division}</p>}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Roll Number</label>
                         <input
                             type="number"
                             placeholder="Roll No (max 3 digits)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.rollNo ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={rollNo}
                             onChange={(e) => setRollNo(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, rollNo: validateRollNo(rollNo) })}
                         />
+                        {errors.rollNo && <p className="text-red-500 text-xs mt-1">{errors.rollNo}</p>}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Year</label>
                         <select
                             value={year}
                             onChange={(e) => setYear(e.target.value)}
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            onBlur={() => setErrors({ ...errors, year: validateYear(year) })}
+                            className={`w-full p-2 sm:p-3 border ${errors.year ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                         >
                             <option value="">Select Year</option>
                             <option value="FY">FY</option>
@@ -260,6 +283,7 @@ function Register() {
                             <option value="TY">TY</option>
                             <option value="FOURTH">FOURTH</option>
                         </select>
+                        {errors.year && <p className="text-red-500 text-xs mt-1">{errors.year}</p>}
                     </div>
                     <div className="col-span-full flex justify-center">
                         <button

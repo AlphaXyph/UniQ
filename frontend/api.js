@@ -23,4 +23,7 @@ export const fetchQuizReport = (quizId) =>
 export const fetchQuiz = (quizId) =>
     API.get(`/quiz/${quizId}`);
 
+export const refreshToken = () =>
+    API.post("/refresh-token");
+
 export default API;

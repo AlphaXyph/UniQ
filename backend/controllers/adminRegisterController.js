@@ -53,7 +53,7 @@ exports.getCurrentURL = async (req, res) => {
         if (!currentURL) {
             console.log("getCurrentURL: No URL found, creating new one...");
             const randomString = generateRandomString();
-            const newURL = `/admin-register/${randomString}`; // Using slash as per previous fix
+            const newURL = `/admin-register/${randomString}`;
             const newAdminURL = new AdminRegisterURL({
                 url: newURL,
                 randomString,

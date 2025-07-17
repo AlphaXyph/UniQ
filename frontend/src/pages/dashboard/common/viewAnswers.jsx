@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import API from "../../../api";
-import Popup from "../../components/popup";
+import API from "../../../../api";
+import Popup from "../../../components/popup";
 
 function ViewAnswers() {
     const { resultId } = useParams();
@@ -80,10 +80,10 @@ function ViewAnswers() {
                                             <li
                                                 key={optIndex}
                                                 className={`${answer.isAnswered && optIndex === answer.correctAnswer
-                                                        ? "text-green-600"
-                                                        : answer.isAnswered && optIndex === answer.userAnswer
-                                                            ? getAnswerColor(answer)
-                                                            : "text-gray-600"
+                                                    ? "text-green-600"
+                                                    : answer.isAnswered && optIndex === answer.userAnswer
+                                                        ? getAnswerColor(answer)
+                                                        : "text-gray-600"
                                                     }`}
                                             >
                                                 {option}

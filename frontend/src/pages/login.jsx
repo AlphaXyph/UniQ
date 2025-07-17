@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import API from "../../api";
 import Popup from "../components/popup";
 
@@ -10,14 +10,10 @@ function Login() {
     const [popup, setPopup] = useState({ message: "", type: "success" });
     const [errors, setErrors] = useState({});
     const navigate = useNavigate();
-    const location = useLocation();
 
     useEffect(() => {
-        console.log("Login: Clearing localStorage on mount");
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        const token = localStorage.getItem("token");
-        console.log("Login: Initial token check:", token);
     }, []);
 
     const validateEmail = (value) => {
@@ -57,24 +53,16 @@ function Login() {
             password: password.trim(),
         };
 
-        console.log("Login: Sending data:", formattedData);
-
         try {
             const res = await API.post("/auth/login", formattedData);
             const { token, user } = res.data;
-            console.log("Login: API response:", { token, user });
             if (!token) {
                 throw new Error("No token received from server");
             }
             localStorage.setItem("token", token);
             localStorage.setItem("user", JSON.stringify(user));
-            console.log("Login: Stored in localStorage:", {
-                token: localStorage.getItem("token"),
-                user: JSON.parse(localStorage.getItem("user")),
-            });
             setPopup({ message: "Login successful!", type: "success" });
         } catch (err) {
-            console.error("Login error:", err.response?.data || err.message);
             setPopup({ message: err.response?.data?.msg || "Login failed", type: "error" });
         }
     };
@@ -83,17 +71,13 @@ function Login() {
         setPopup({ message: "", type: "success" });
         setErrors({});
         const token = localStorage.getItem("token");
-        console.log("closePopup: Token found:", token);
         if (token && popup.type === "success") {
-            console.log("closePopup: Navigating to dashboard, Location:", location.pathname);
             try {
                 navigate("/dashboard", { replace: true });
-            } catch (navError) {
-                console.error("closePopup: Navigation error:", navError);
-                setPopup({ message: "Failed to navigate to dashboard", type: "error" });
+            } catch (err) {
+                setPopup({ message: err.response?.data?.msg || "Failed to navigate to dashboard", type: "error" });
             }
         } else if (!token && popup.type === "success") {
-            console.error("closePopup: No token found after successful login, navigation aborted");
             setPopup({ message: "Login failed: No token found", type: "error" });
         }
     };
