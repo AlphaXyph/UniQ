@@ -18,6 +18,7 @@ function AttemptQuiz({ setIsQuizActive }) {
     const user = JSON.parse(localStorage.getItem("user"));
     const role = user?.role || "user";
     const MAX_VIOLATIONS = 3;
+    const [sessionId] = useState(`${quizId}-${Date.now()}`);
 
     const shuffleArray = (array) => {
         const shuffled = [...array];
@@ -32,19 +33,34 @@ function AttemptQuiz({ setIsQuizActive }) {
 
     const checkBrowserSupport = useCallback(() => {
         const ua = navigator.userAgent.toLowerCase();
-        const isChrome = /chrome|chromium|crios/.test(ua) && !/edge|edgios/.test(ua);
-        const isFirefox = /firefox|fxios/.test(ua);
-        const isSafari = /safari/.test(ua) && !/chrome|crios/.test(ua);
+        const isMobile = /mobile|android|iphone|ipad|ipod|tablet/.test(ua);
+        const isChrome = /chrome|chromium|crios/.test(ua) && !/edge|edgios|opr|opera|ucbrowser|samsungbrowser/.test(ua);
+        const isFirefox = /firefox|fxios/.test(ua) && !/seamonkey/.test(ua);
+        const isSafari = /safari/.test(ua) && !/chrome|crios|opr|opera|ucbrowser|samsungbrowser/.test(ua);
         const isEdge = /edge|edgios/.test(ua);
         const isFullscreenSupported =
             document.fullscreenEnabled ||
             document.webkitFullscreenEnabled ||
-            document.msFullscreenEnabled;
+            document.msFullscreenEnabled ||
+            (isMobile && (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen));
 
-        if (!(isChrome || isFirefox || isSafari || isEdge) || !isFullscreenSupported) {
+        const isWebRTCSupported = !!window.RTCPeerConnection;
+        const isWebGLSupported = !!window.WebGLRenderingContext;
+        const isNavigatorValid = navigator.userAgent !== "" && (navigator.vendor !== "" || isSafari); // Safari on iOS may have empty vendor
+        const isSuspiciousUA = /bot|crawler|spider|headless|phantom|splash|playwright|selenium|ucbrowser|opera mini|puffin|qqbrowser/.test(ua);
+
+        if (
+            !(isChrome || isFirefox || isSafari || isEdge) ||
+            !isFullscreenSupported ||
+            !isWebRTCSupported ||
+            !isWebGLSupported ||
+            !isNavigatorValid ||
+            isSuspiciousUA
+        ) {
             setIsBrowserSupported(false);
             setPopup({
-                message: "Your browser is not supported. Please use the latest version of Chrome, Firefox, Edge, or Safari.",
+                message:
+                    "Your browser is not supported or appears to be a third-party/fake browser. Please use the latest version of Chrome, Firefox, Edge, or Safari.",
                 type: "error",
                 confirmAction: () => navigate("/dashboard"),
             });
@@ -130,15 +146,33 @@ function AttemptQuiz({ setIsQuizActive }) {
             if (elem.requestFullscreen) {
                 elem.requestFullscreen({ navigationUI: "hide" }).catch(() => {
                     setPopup({
-                        message: "Failed to enter fullscreen mode. Please ensure your browser supports fullscreen.",
+                        message: "Failed to enter fullscreen mode. Please ensure your browser supports fullscreen and use Chrome, Firefox, Edge, or Safari.",
                         type: "error",
                         confirmAction: null,
                     });
                 });
             } else if (elem.webkitRequestFullscreen) {
-                elem.webkitRequestFullscreen();
+                elem.webkitRequestFullscreen().catch(() => {
+                    setPopup({
+                        message: "Failed to enter fullscreen mode. Please ensure your browser supports fullscreen and use Chrome, Firefox, Edge, or Safari.",
+                        type: "error",
+                        confirmAction: null,
+                    });
+                });
             } else if (elem.msRequestFullscreen) {
-                elem.msRequestFullscreen();
+                elem.msRequestFullscreen().catch(() => {
+                    setPopup({
+                        message: "Failed to enter fullscreen mode. Please ensure your browser supports fullscreen and use Chrome, Firefox, Edge, or Safari.",
+                        type: "error",
+                        confirmAction: null,
+                    });
+                });
+            } else {
+                setPopup({
+                    message: "Fullscreen mode is not supported on this device. Please use a supported browser (Chrome, Firefox, Edge, or Safari).",
+                    type: "error",
+                    confirmAction: null,
+                });
             }
         }
     }, []);
@@ -149,6 +183,104 @@ function AttemptQuiz({ setIsQuizActive }) {
 
             enforceFullscreen();
             setIsQuizActive(true);
+
+            localStorage.setItem(`quizSession_${quizId}`, sessionId);
+
+            let resizeTimeout = null;
+            let focusTimeout = null;
+
+            const checkMultipleInstances = () => {
+                if (localStorage.getItem(`quizSession_${quizId}`) !== sessionId) {
+                    setViolationCount((prev) => prev + 1);
+                    setPopup({
+                        message: "Multiple quiz instances detected. This is not allowed.",
+                        type: "error",
+                        confirmAction: null,
+                    });
+                    enforceFullscreen();
+                    if (violationCount + 1 >= MAX_VIOLATIONS) {
+                        handleSubmit(true);
+                    }
+                }
+            };
+
+            const checkDevTools = () => {
+                const ua = navigator.userAgent.toLowerCase();
+                const isMobile = /mobile|android|iphone|ipad|ipod|tablet/.test(ua);
+                if (!isMobile) {
+                    const threshold = 100;
+                    const widthDiff = window.outerWidth - window.innerWidth;
+                    const heightDiff = window.outerHeight - window.innerHeight;
+                    if (widthDiff > threshold || heightDiff > threshold) {
+                        setViolationCount((prev) => prev + 1);
+                        setPopup({
+                            message: "Developer tools detected. Please close them and restore fullscreen.",
+                            type: "error",
+                            confirmAction: null,
+                        });
+                        enforceFullscreen();
+                        if (violationCount + 1 >= MAX_VIOLATIONS) {
+                            handleSubmit(true);
+                        }
+                        return true;
+                    }
+                }
+                return false;
+            };
+
+            const checkFullscreenCompliance = () => {
+                if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                    setViolationCount((prev) => prev + 1);
+                    setPopup({
+                        message: `Fullscreen not restored within 5 seconds. Attempts left: ${MAX_VIOLATIONS - violationCount - 1}`,
+                        type: "error",
+                        confirmAction: null,
+                    });
+                    enforceFullscreen();
+                    if (violationCount + 1 < MAX_VIOLATIONS) {
+                        resizeTimeout = setTimeout(checkFullscreenCompliance, 5000);
+                    } else {
+                        handleSubmit(true);
+                    }
+                }
+            };
+
+            const checkFocusCompliance = () => {
+                if (document.hidden || !document.hasFocus()) {
+                    setViolationCount((prev) => prev + 1);
+                    setPopup({
+                        message: `Focus not restored within 5 seconds. Return to the quiz window. Attempts left: ${MAX_VIOLATIONS - violationCount - 1}`,
+                        type: "error",
+                        confirmAction: null,
+                    });
+                    enforceFullscreen();
+                    if (violationCount + 1 < MAX_VIOLATIONS) {
+                        focusTimeout = setTimeout(checkFocusCompliance, 5000);
+                    } else {
+                        handleSubmit(true);
+                    }
+                }
+            };
+
+            const handleResize = () => {
+                const expectedWidth = window.screen.width;
+                const expectedHeight = window.screen.height;
+                if (window.innerWidth < expectedWidth * 0.9 || window.innerHeight < expectedHeight * 0.9) {
+                    setViolationCount((prev) => prev + 1);
+                    setPopup({
+                        message: "Window resizing or split-screen detected. Restore fullscreen within 5 seconds.",
+                        type: "error",
+                        confirmAction: null,
+                    });
+                    enforceFullscreen();
+                    if (violationCount + 1 < MAX_VIOLATIONS) {
+                        if (resizeTimeout) clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(checkFullscreenCompliance, 5000);
+                    } else {
+                        handleSubmit(true);
+                    }
+                }
+            };
 
             const handleViolation = (type) => {
                 if (isSubmitted) return;
@@ -173,17 +305,38 @@ function AttemptQuiz({ setIsQuizActive }) {
             const fullscreenChange = () => {
                 if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
                     handleViolation("Fullscreen exit");
+                    if (resizeTimeout) clearTimeout(resizeTimeout);
+                    if (violationCount + 1 < MAX_VIOLATIONS) {
+                        resizeTimeout = setTimeout(checkFullscreenCompliance, 5000);
+                    }
                 }
             };
 
             const visibilityChange = () => {
                 if (document.hidden) {
-                    handleViolation("Tab switch or minimization");
+                    handleViolation("Tab switch or app switch");
+                    if (focusTimeout) clearTimeout(focusTimeout);
+                    if (violationCount + 1 < MAX_VIOLATIONS) {
+                        focusTimeout = setTimeout(checkFocusCompliance, 5000);
+                    }
                 }
             };
 
-            const handleBlur = () => handleViolation("Window lost focus");
-            const handleFocus = () => enforceFullscreen();
+            const handleBlur = () => {
+                handleViolation("Window lost focus (possible activity on another screen)");
+                if (focusTimeout) clearTimeout(focusTimeout);
+                if (violationCount + 1 < MAX_VIOLATIONS) {
+                    focusTimeout = setTimeout(checkFocusCompliance, 5000);
+                }
+            };
+
+            const handleFocus = () => {
+                enforceFullscreen();
+                checkMultipleInstances();
+                checkBrowserSupport();
+                checkDevTools();
+                if (focusTimeout) clearTimeout(focusTimeout);
+            };
 
             const handleKeyDown = (e) => {
                 if (
@@ -192,10 +345,11 @@ function AttemptQuiz({ setIsQuizActive }) {
                     (e.altKey && e.key === "Tab") ||
                     (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "J" || e.key === "C")) ||
                     (e.ctrlKey && (e.key === "U" || e.key === "S")) ||
-                    e.key === "F12"
+                    e.key === "F12" ||
+                    e.key === "Meta"
                 ) {
                     e.preventDefault();
-                    handleViolation("Keyboard shortcut");
+                    handleViolation("Keyboard shortcut or device-specific key");
                 }
             };
 
@@ -226,8 +380,14 @@ function AttemptQuiz({ setIsQuizActive }) {
             document.addEventListener("paste", disableCopyPaste);
             document.addEventListener("contextmenu", disableCopyPaste);
             document.addEventListener("dragstart", disableCopyPaste);
+            window.addEventListener("resize", handleResize);
 
-            const interval = setInterval(enforceFullscreen, 100);
+            const interval = setInterval(() => {
+                enforceFullscreen();
+                checkMultipleInstances();
+                checkBrowserSupport();
+                checkDevTools();
+            }, 100);
 
             return () => {
                 document.body.style.userSelect = "";
@@ -247,11 +407,15 @@ function AttemptQuiz({ setIsQuizActive }) {
                 document.removeEventListener("paste", disableCopyPaste);
                 document.removeEventListener("contextmenu", disableCopyPaste);
                 document.removeEventListener("dragstart", disableCopyPaste);
+                window.removeEventListener("resize", handleResize);
                 clearInterval(interval);
+                if (resizeTimeout) clearTimeout(resizeTimeout);
+                if (focusTimeout) clearTimeout(focusTimeout);
+                localStorage.removeItem(`quizSession_${quizId}`);
                 setIsQuizActive(false);
             };
         }
-    }, [isStarted, role, violationCount, enforceFullscreen, handleSubmit, setIsQuizActive, isSubmitted, checkBrowserSupport]);
+    }, [isStarted, role, violationCount, enforceFullscreen, handleSubmit, setIsQuizActive, isSubmitted, checkBrowserSupport, sessionId, quizId]);
 
     useEffect(() => {
         if (role === "user" && isStarted && timeLeft > 0) {
@@ -332,10 +496,10 @@ function AttemptQuiz({ setIsQuizActive }) {
                             <li><strong>Time Limit</strong>: You have {quiz.timer} minute{quiz.timer !== 1 ? "s" : ""} to complete the quiz. The timer starts as soon as you click "Start Quiz."</li>
                             <li><strong>Questions</strong>: The quiz contains {quiz.questions.length} question{quiz.questions.length !== 1 ? "s" : ""}. All questions must be answered before submission.</li>
                             <li><strong>Submission</strong>: Once you submit the quiz, you cannot change your answers. Ensure all questions are answered before submitting.</li>
-                            <li><strong>Fullscreen Mode</strong>: The quiz must be taken in fullscreen mode. Exiting fullscreen or switching tabs will be considered a violation.</li>
-                            <li><strong>Violation Policy</strong>: You are allowed {MAX_VIOLATIONS} violations (e.g., exiting fullscreen or switching tabs). Exceeding this will result in automatic submission.</li>
+                            <li><strong>Fullscreen Mode</strong>: The quiz must be taken in fullscreen mode on supported browsers. Exiting fullscreen, resizing the window, switching apps, or using unsupported browsers will be considered a violation.</li>
+                            <li><strong>Violation Policy</strong>: You are allowed {MAX_VIOLATIONS} violations (e.g., exiting fullscreen, switching apps/screens, using device-specific keys, or resizing). You have 5 seconds to restore fullscreen and focus after a violation, or additional violations will be counted.</li>
+                            <li><strong>Browser Requirements</strong>: Use only the latest version of Chrome, Firefox, Edge, or Safari on desktop or mobile. Other browsers (e.g., UC Browser, Opera Mini) are not allowed and will be blocked.</li>
                             <li><strong>Technical Requirements</strong>: Ensure a stable internet connection and avoid refreshing the page to prevent quiz interruptions.</li>
-                            <li><strong>Browser Requirements</strong>: Use the latest version of Chrome, Firefox, Edge, or Safari for full compatibility.</li>
                         </ul>
                         <button
                             onClick={() => setIsStarted(true)}
