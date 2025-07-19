@@ -1,40 +1,4 @@
 const Result = require("../models/result");
-const Quiz = require("../models/quiz");
-
-const submitQuiz = async (req, res) => {
-    try {
-        const { quizId, answers } = req.body;
-        const studentId = req.user.id;
-
-        const existingResult = await Result.findOne({ student: studentId, quiz: quizId });
-        if (existingResult) {
-            return res.status(403).json({ msg: "You have already attempted this quiz" });
-        }
-
-        console.log("Submitting quiz:", { quizId, studentId, answers });
-        const quiz = await Quiz.findById(quizId);
-        if (!quiz) return res.status(404).json({ msg: "Quiz not found" });
-
-        let score = 0;
-        quiz.questions.forEach((q, idx) => {
-            if (q.answer === answers[idx]) score++;
-        });
-
-        const result = new Result({
-            student: studentId,
-            quiz: quizId,
-            answers,
-            score,
-            total: quiz.questions.length,
-        });
-
-        await result.save();
-        res.json({ msg: "Quiz submitted", score, total: quiz.questions.length });
-    } catch (err) {
-        console.error("Submit quiz error:", err.message, err.stack);
-        res.status(500).json({ msg: "Submit failed" });
-    }
-};
 
 const getUserResults = async (req, res) => {
     try {
@@ -180,4 +144,10 @@ const canViewAnswers = async (req, res) => {
     }
 };
 
-module.exports = { submitQuiz, getUserResults, getAllResults, getQuizReport, getUserAnswer, canViewAnswers };
+module.exports = {
+    getUserResults,
+    getAllResults,
+    getQuizReport,
+    getUserAnswer,
+    canViewAnswers
+};
