@@ -1,6 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, getProfile, updateProfile, changePassword, getAllUsers, deleteUser, requestPasswordReset, resetPassword, } = require('../controllers/authController');
+const {
+    register,
+    login,
+    getProfile,
+    updateProfile,
+    changePassword,
+    getAllUsers,
+    deleteUser,
+    requestPasswordReset,
+    resetPassword,
+    refreshToken
+} = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // Public routes
@@ -13,6 +24,7 @@ router.post("/reset-password", resetPassword);
 router.get("/profile", authMiddleware, getProfile);
 router.put("/profile", authMiddleware, updateProfile);
 router.post("/change-password", authMiddleware, changePassword);
+router.post("/refresh-token", authMiddleware, refreshToken);
 router.get("/users", authMiddleware, getAllUsers);
 router.delete("/users/:id", authMiddleware, deleteUser);
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API from "../../../../api";
 import Popup from "../../../components/popup";
+import { jwtDecode } from "jwt-decode";
 
 function AttemptQuiz({ setIsQuizActive }) {
     const { quizId } = useParams();
@@ -147,6 +148,35 @@ function AttemptQuiz({ setIsQuizActive }) {
             }
         }
     }, [isSubmitted]);
+
+    const refreshToken = useCallback(async () => {
+        try {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                setPopup({ message: "Session expired. Please log in again.", type: "error" });
+                setTimeout(() => navigate("/login"), 3000);
+                return;
+            }
+
+            const decoded = jwtDecode(token);
+            const currentTime = Math.floor(Date.now() / 1000);
+            const timeUntilExpiry = decoded.exp - currentTime;
+
+            if (timeUntilExpiry < 15 * 60) { // Less than 15 minutes remaining
+                const res = await API.post("/auth/refresh-token", {}, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                const newToken = res.data.token;
+                localStorage.setItem("token", newToken);
+                setPopup({ message: "Session extended successfully.", type: "success" });
+                setTimeout(() => setPopup({ message: "", type: "success" }), 2000);
+            }
+        } catch (err) {
+            console.error("Token refresh failed:", err);
+            setPopup({ message: "Session expired. Please log in again.", type: "error" });
+            setTimeout(() => navigate("/login"), 3000);
+        }
+    }, [navigate]);
 
     useEffect(() => {
         const fetchQuiz = async () => {
@@ -297,7 +327,6 @@ function AttemptQuiz({ setIsQuizActive }) {
                 let isSplitScreen = false;
 
                 if (isMobile) {
-                    // Mobile split-screen detection
                     const widthThreshold = 50;
                     const heightThreshold = isIOS ? 150 : 100;
                     const expectedWidth = window.screen.availWidth || window.screen.width;
@@ -312,7 +341,6 @@ function AttemptQuiz({ setIsQuizActive }) {
                         isSplitScreen = true;
                     }
                 } else {
-                    // Desktop split-screen detection
                     const threshold = 100;
                     const widthDiff = window.outerWidth - window.innerWidth;
                     const heightDiff = window.outerHeight - window.innerHeight;
@@ -523,6 +551,15 @@ function AttemptQuiz({ setIsQuizActive }) {
             return () => clearInterval(timerId);
         }
     }, [isStarted, timeLeft, role, quiz, handleSubmit]);
+
+    useEffect(() => {
+        if (isStarted && role === "user" && timeLeft > 0 && quiz) {
+            const tokenCheckInterval = setInterval(() => {
+                refreshToken();
+            }, 60000); // Check every 60 seconds
+            return () => clearInterval(tokenCheckInterval);
+        }
+    }, [isStarted, role, timeLeft, quiz, refreshToken]);
 
     const handleOptionChange = (qIndex, optIndex) => {
         const copy = [...answers];

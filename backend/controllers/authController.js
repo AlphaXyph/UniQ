@@ -4,7 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const Otp = require("../models/otp");
-const sendEmail = require("../configs/sendEmail")
+const sendEmail = require("../configs/sendEmail");
 
 // Generate a 16-character random string
 function generateRandomString(length = 16) {
@@ -12,7 +12,7 @@ function generateRandomString(length = 16) {
 }
 
 // Register user
-exports.register = async (req, res) => {
+async function register(req, res) {
     const { email, password, role, name, surname, branch, division, rollNo, year } = req.body;
 
     try {
@@ -36,10 +36,10 @@ exports.register = async (req, res) => {
     } catch (err) {
         res.status(500).json({ msg: "Server error" });
     }
-};
+}
 
 // Login user
-exports.login = async (req, res) => {
+async function login(req, res) {
     const { email, password } = req.body;
 
     try {
@@ -66,10 +66,35 @@ exports.login = async (req, res) => {
     } catch (err) {
         res.status(500).json({ msg: "Server error" });
     }
-};
+}
+
+// Refresh token
+async function refreshToken(req, res) {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ msg: "User not found" });
+
+        const newToken = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+            expiresIn: "2h",
+        });
+
+        res.json({
+            token: newToken,
+            user: {
+                email: user.email,
+                role: user.role,
+                name: user.name,
+                surname: user.surname,
+                ...(user.role === "user" && { branch: user.branch, division: user.division, rollNo: user.rollNo, year: user.year }),
+            },
+        });
+    } catch (err) {
+        res.status(500).json({ msg: "Server error" });
+    }
+}
 
 // Request OTP for password reset
-exports.requestPasswordReset = async (req, res) => {
+async function requestPasswordReset(req, res) {
     try {
         const { email } = req.body;
         const user = await User.findOne({ email });
@@ -94,10 +119,10 @@ exports.requestPasswordReset = async (req, res) => {
         console.error(err);
         res.status(500).json({ msg: "Server error" });
     }
-};
+}
 
 // Verify OTP and reset password
-exports.resetPassword = async (req, res) => {
+async function resetPassword(req, res) {
     try {
         const { email, otp, newPassword } = req.body;
 
@@ -130,10 +155,10 @@ exports.resetPassword = async (req, res) => {
         console.error(err);
         res.status(500).json({ msg: "Server error" });
     }
-};
+}
 
 // Get profile
-exports.getProfile = async (req, res) => {
+async function getProfile(req, res) {
     try {
         const user = await User.findById(req.user.id).select('-password');
         if (!user) return res.status(404).json({ msg: "User not found" });
@@ -141,10 +166,10 @@ exports.getProfile = async (req, res) => {
     } catch (err) {
         res.status(500).json({ msg: "Server error" });
     }
-};
+}
 
 // Update profile
-exports.updateProfile = async (req, res) => {
+async function updateProfile(req, res) {
     const { name, surname, branch, division, rollNo, year } = req.body;
 
     try {
@@ -165,10 +190,10 @@ exports.updateProfile = async (req, res) => {
     } catch (err) {
         res.status(500).json({ msg: "Server error" });
     }
-};
+}
 
 // Change password
-exports.changePassword = async (req, res) => {
+async function changePassword(req, res) {
     const { currentPassword, newPassword } = req.body;
 
     try {
@@ -186,10 +211,10 @@ exports.changePassword = async (req, res) => {
     } catch (err) {
         res.status(500).json({ msg: "Server error" });
     }
-};
+}
 
 // Get all users (for admins only)
-exports.getAllUsers = async (req, res) => {
+async function getAllUsers(req, res) {
     try {
         if (req.user.role !== "admin") {
             return res.status(403).json({ msg: "Access denied. Admins only." });
@@ -200,10 +225,10 @@ exports.getAllUsers = async (req, res) => {
     } catch (err) {
         res.status(500).json({ msg: "Server error" });
     }
-};
+}
 
 // Delete user
-exports.deleteUser = async (req, res) => {
+async function deleteUser(req, res) {
     try {
         if (req.user.role !== "admin") {
             return res.status(403).json({ msg: "Access denied. Admins only." });
@@ -226,4 +251,17 @@ exports.deleteUser = async (req, res) => {
     } catch (err) {
         res.status(500).json({ msg: "Server error" });
     }
+}
+
+module.exports = {
+    register,
+    login,
+    refreshToken,
+    requestPasswordReset,
+    resetPassword,
+    getProfile,
+    updateProfile,
+    changePassword,
+    getAllUsers,
+    deleteUser
 };
