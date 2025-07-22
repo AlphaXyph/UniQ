@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api";
 import Popup from "../components/popup";
@@ -16,7 +16,22 @@ function Register() {
     const [showPassword, setShowPassword] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success" });
     const [errors, setErrors] = useState({});
+    const [isLoading, setIsLoading] = useState(false);
+    const [showWakeUpMessage, setShowWakeUpMessage] = useState(false); // For wake-up popup
     const navigate = useNavigate();
+
+    useEffect(() => {
+        let timer;
+        if (isLoading) {
+            timer = setTimeout(() => {
+                setShowWakeUpMessage(true);
+            }, 5000); // Show wake-up message after 5 seconds
+        } else {
+            setShowWakeUpMessage(false);
+        }
+
+        return () => clearTimeout(timer);
+    }, [isLoading]);
 
     const formatName = (value) => {
         if (!value) return value;
@@ -125,6 +140,7 @@ function Register() {
             return;
         }
 
+        setIsLoading(true);
         const formattedData = {
             email: email.toLowerCase().trim(),
             password: password.trim(),
@@ -143,18 +159,28 @@ function Register() {
             setTimeout(() => navigate("/"), 2000);
         } catch (err) {
             setPopup({ message: err.response?.data?.msg || "Register failed", type: "error" });
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const closePopup = () => {
         setPopup({ message: "", type: "success" });
         setErrors({});
+        setShowWakeUpMessage(false); // Close wake-up message if open
     };
 
     return (
         <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
             <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} />
+                {showWakeUpMessage && (
+                    <Popup
+                        message="Waking up the backend, this may take a moment..."
+                        type="info"
+                        onClose={() => setShowWakeUpMessage(false)}
+                    />
+                )}
                 <h2 className="text-lg sm:text-xl font-bold text-gray-800 text-center flex items-center gap-2">
                     <i className="fas fa-user-plus"></i> Register
                 </h2>
@@ -168,6 +194,7 @@ function Register() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             onBlur={() => setErrors({ ...errors, email: validateEmail(email) })}
+                            disabled={isLoading}
                         />
                         {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                     </div>
@@ -180,11 +207,13 @@ function Register() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             onBlur={() => setErrors({ ...errors, password: validatePassword(password) })}
+                            disabled={isLoading}
                         />
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute right-2 top-2/3 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs sm:text-sm"
+                            disabled={isLoading}
                         >
                             <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
                         </button>
@@ -199,11 +228,13 @@ function Register() {
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             onBlur={() => setErrors({ ...errors, confirmPassword: validateConfirmPassword(confirmPassword) })}
+                            disabled={isLoading}
                         />
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute right-2 top-2/3 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs sm:text-sm"
+                            disabled={isLoading}
                         >
                             <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
                         </button>
@@ -218,6 +249,7 @@ function Register() {
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             onBlur={() => setErrors({ ...errors, name: validateName(name) })}
+                            disabled={isLoading}
                         />
                         {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                     </div>
@@ -230,6 +262,7 @@ function Register() {
                             value={surname}
                             onChange={(e) => setSurname(e.target.value)}
                             onBlur={() => setErrors({ ...errors, surname: validateSurname(surname) })}
+                            disabled={isLoading}
                         />
                         {errors.surname && <p className="text-red-500 text-xs mt-1">{errors.surname}</p>}
                     </div>
@@ -242,6 +275,7 @@ function Register() {
                             value={branch}
                             onChange={(e) => setBranch(e.target.value)}
                             onBlur={() => setErrors({ ...errors, branch: validateBranch(branch) })}
+                            disabled={isLoading}
                         />
                         {errors.branch && <p className="text-red-500 text-xs mt-1">{errors.branch}</p>}
                     </div>
@@ -254,6 +288,7 @@ function Register() {
                             value={division}
                             onChange={(e) => setDivision(e.target.value)}
                             onBlur={() => setErrors({ ...errors, division: validateDivision(division) })}
+                            disabled={isLoading}
                         />
                         {errors.division && <p className="text-red-500 text-xs mt-1">{errors.division}</p>}
                     </div>
@@ -266,6 +301,7 @@ function Register() {
                             value={rollNo}
                             onChange={(e) => setRollNo(e.target.value)}
                             onBlur={() => setErrors({ ...errors, rollNo: validateRollNo(rollNo) })}
+                            disabled={isLoading}
                         />
                         {errors.rollNo && <p className="text-red-500 text-xs mt-1">{errors.rollNo}</p>}
                     </div>
@@ -276,6 +312,7 @@ function Register() {
                             onChange={(e) => setYear(e.target.value)}
                             onBlur={() => setErrors({ ...errors, year: validateYear(year) })}
                             className={`w-full p-2 sm:p-3 border ${errors.year ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
+                            disabled={isLoading}
                         >
                             <option value="">Select Year</option>
                             <option value="FY">FY</option>
@@ -288,9 +325,17 @@ function Register() {
                     <div className="col-span-full flex justify-center">
                         <button
                             type="submit"
-                            className="px-6 py-2 w-1/3 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm"
+                            className="px-6 py-2 w-1/3 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm relative"
+                            disabled={isLoading}
                         >
-                            Register
+                            {isLoading ? (
+                                <div className="flex items-center justify-center">
+                                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                                    <span className="ml-2">Registering...</span>
+                                </div>
+                            ) : (
+                                "Register"
+                            )}
                         </button>
                     </div>
                     <div className="col-span-full flex flex-col items-center justify-center">
@@ -299,6 +344,7 @@ function Register() {
                             type="button"
                             onClick={() => navigate("/")}
                             className="text-blue-500 text-sm my-2 hover:underline"
+                            disabled={isLoading}
                         >
                             Login Here
                         </button>

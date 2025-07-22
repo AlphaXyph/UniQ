@@ -9,12 +9,26 @@ function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success" });
     const [errors, setErrors] = useState({});
+    const [isLoading, setIsLoading] = useState(false);
+    const [showWakeUpMessage, setShowWakeUpMessage] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
     }, []);
+
+    useEffect(() => {
+        let timer;
+        if (isLoading) {
+            timer = setTimeout(() => {
+                setShowWakeUpMessage(true);
+            }, 5000);
+        } else {
+            setShowWakeUpMessage(false);
+        }
+        return () => clearTimeout(timer);
+    }, [isLoading]);
 
     const validateEmail = (value) => {
         const lowerCaseEmail = value.toLowerCase().trim();
@@ -48,6 +62,7 @@ function Login() {
             return;
         }
 
+        setIsLoading(true);
         const formattedData = {
             email: email.toLowerCase().trim(),
             password: password.trim(),
@@ -62,30 +77,33 @@ function Login() {
             localStorage.setItem("token", token);
             localStorage.setItem("user", JSON.stringify(user));
             setPopup({ message: "Login successful!", type: "success" });
+            setTimeout(() => {
+                navigate("/dashboard", { replace: true });
+            }, 1000);
         } catch (err) {
             setPopup({ message: err.response?.data?.msg || "Login failed", type: "error" });
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const closePopup = () => {
         setPopup({ message: "", type: "success" });
         setErrors({});
-        const token = localStorage.getItem("token");
-        if (token && popup.type === "success") {
-            try {
-                navigate("/dashboard", { replace: true });
-            } catch (err) {
-                setPopup({ message: err.response?.data?.msg || "Failed to navigate to dashboard", type: "error" });
-            }
-        } else if (!token && popup.type === "success") {
-            setPopup({ message: "Login failed: No token found", type: "error" });
-        }
+        setShowWakeUpMessage(false);
     };
 
     return (
         <div className="min-h-screen p-4 sm:p-6 bg-gray-100 flex items-center justify-center">
             <div className="w-full max-w-md bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} />
+                {showWakeUpMessage && (
+                    <Popup
+                        message="Waking up the backend, this may take a moment..."
+                        type="success"
+                        onClose={() => setShowWakeUpMessage(false)}
+                    />
+                )}
                 <h2 className="text-lg sm:text-xl font-bold text-gray-800 text-center flex items-center gap-2">
                     <i className="fas fa-sign-in-alt"></i> UniQ Login
                 </h2>
@@ -99,6 +117,7 @@ function Login() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             onBlur={() => setErrors({ ...errors, email: validateEmail(email) })}
+                            disabled={isLoading}
                         />
                         {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                     </div>
@@ -112,11 +131,13 @@ function Login() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 onBlur={() => setErrors({ ...errors, password: validatePassword(password) })}
+                                disabled={isLoading}
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
                                 className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs sm:text-sm"
+                                disabled={isLoading}
                             >
                                 <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
                             </button>
@@ -128,9 +149,17 @@ function Login() {
                     </div>
                     <button
                         type="submit"
-                        className="w-full p-2 sm:p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 text-xs sm:text-sm"
+                        className="w-full p-2 sm:p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 text-xs sm:text-sm relative"
+                        disabled={isLoading}
                     >
-                        Login
+                        {isLoading ? (
+                            <div className="flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                                <span className="ml-2">Logging in...</span>
+                            </div>
+                        ) : (
+                            "Login"
+                        )}
                     </button>
                     <div className="text-center text-xs sm:text-sm">
                         <p>Don't have an account?</p>
@@ -138,6 +167,7 @@ function Login() {
                             type="button"
                             onClick={() => navigate("/register")}
                             className="text-blue-500 hover:underline mt-2"
+                            disabled={isLoading}
                         >
                             Register Here
                         </button>
