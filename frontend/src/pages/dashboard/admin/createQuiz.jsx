@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import API from "../../../../api";
 import Papa from "papaparse";
 import Popup from "../../../components/popup";
@@ -15,8 +15,60 @@ function CreateQuiz() {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success", confirmAction: null, confirmInput: "" });
     const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+    const [showSpeechBubble, setShowSpeechBubble] = useState(true);
+    const [displayedText, setDisplayedText] = useState("");
+    const [isTyping, setIsTyping] = useState(true);
     const fileInputRef = useRef(null);
     const user = JSON.parse(localStorage.getItem("user"));
+
+    const fullText = "Hello! Would you like my help in creating a quiz?";
+
+    // Handle typing and backspace animation
+    useEffect(() => {
+        if (isChatbotOpen || !showSpeechBubble) {
+            setShowSpeechBubble(false);
+            setDisplayedText("");
+            setIsTyping(true);
+            return;
+        }
+
+        let timer;
+        let currentIndex = displayedText.length;
+
+        if (isTyping) {
+            // Typing animation
+            if (currentIndex < fullText.length) {
+                timer = setInterval(() => {
+                    setDisplayedText(fullText.slice(0, currentIndex + 1));
+                    currentIndex++;
+                    if (currentIndex >= fullText.length) {
+                        clearInterval(timer);
+                        setTimeout(() => setIsTyping(false), 1000); // Pause before backspacing
+                    }
+                }, 50); // Typing speed
+            } else {
+                setTimeout(() => setIsTyping(false), 1000); // Trigger backspace if already at end
+            }
+        } else {
+            // Backspace animation
+            if (currentIndex > 0) {
+                timer = setInterval(() => {
+                    setDisplayedText(fullText.slice(0, currentIndex - 1));
+                    currentIndex--;
+                    if (currentIndex <= 0) {
+                        clearInterval(timer);
+                        setShowSpeechBubble(false);
+                        setIsTyping(true); // Reset for next cycle
+                    }
+                }, 30); // Backspace speed
+            } else {
+                setShowSpeechBubble(false);
+                setIsTyping(true); // Reset for next cycle
+            }
+        }
+
+        return () => clearInterval(timer);
+    }, [isChatbotOpen, showSpeechBubble, isTyping, displayedText, fullText]);
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
@@ -144,7 +196,6 @@ function CreateQuiz() {
         setPopup({ message: "", type: "success", confirmAction: null, confirmInput: "" });
     };
 
-    // Sample CSV content for download
     const sampleCsvContent = `question,optionA,optionB,optionC,optionD,correct
 "What is the capital of France?","Paris","London","Berlin","Madrid",1
 "What is 2 + 2?","3","4","5","6",2`;
@@ -283,6 +334,13 @@ function CreateQuiz() {
                             >
                                 <i className="fa-solid fa-download mr-1"></i> Sample.csv
                             </button>
+                            <button
+                                type="button"
+                                className="inline-block w-auto px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs sm:text-sm text-center"
+                                onClick={() => setIsChatbotOpen(true)}
+                            >
+                                <i className="fas fa-robot mr-1"></i> Create with AI
+                            </button>
                         </div>
                     </div>
                     {questions.length > 0 ? (
@@ -348,7 +406,7 @@ function CreateQuiz() {
                             </div>
                         ))
                     ) : (
-                        <p className="text-gray-500 text-xs sm:text-sm">No questions added. Upload a CSV or click "+ Add Question".</p>
+                        <p className="text-gray-500 text-xs sm:text-sm">No questions added. Upload a CSV, click "+ Add Question", or use "Create with AI".</p>
                     )}
                     <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                         <button
@@ -366,13 +424,23 @@ function CreateQuiz() {
                         </button>
                     </div>
                 </form>
-                <button
-                    onClick={() => setIsChatbotOpen(!isChatbotOpen)}
-                    className="fixed bottom-4 right-4 bg-blue-500 text-white p-2 sm:p-3 rounded-full shadow-md hover:bg-blue-600 z-50 text-base"
-                    title="AI Quiz Generator"
-                >
-                    <i className="fas fa-robot"></i>
-                </button>
+                <div className="fixed bottom-4 right-4 z-50">
+                    <div className="relative">
+                        {showSpeechBubble && !isChatbotOpen && (
+                            <div className="absolute right-14 bottom-0 bg-blue-600 text-white text-sm sm:text-base md:text-md rounded-lg px-3 py-2 shadow-md w-44 sm:w-56 md:w-80">
+                                <span className="block">{displayedText}</span>
+                                <div className="absolute top-1/2 right-[-6px] w-3 h-3 bg-blue-600 transform rotate-45 -translate-y-1/2"></div>
+                            </div>
+                        )}
+                        <button
+                            onClick={() => setIsChatbotOpen(!isChatbotOpen)}
+                            className="bg-blue-500 text-white p-2 sm:p-3 rounded-full shadow-md hover:bg-blue-600 text-base"
+                            title="AI Quiz Generator"
+                        >
+                            <i className="fas fa-robot"></i>
+                        </button>
+                    </div>
+                </div>
                 {isChatbotOpen && <AIChatbot onClose={() => setIsChatbotOpen(false)} importQuestions={importGeneratedQuestions} />}
             </div>
         </div>

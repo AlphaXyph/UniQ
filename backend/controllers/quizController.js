@@ -126,9 +126,9 @@ const toggleQuizVisibility = async (req, res) => {
     }
 };
 
-const startQuiz = async (req, res) => {
+const submitQuiz = async (req, res) => {
     try {
-        const { quizId } = req.body;
+        const { quizId, answers } = req.body;
         const studentId = req.user.id;
 
         // Check if quiz exists
@@ -143,59 +143,23 @@ const startQuiz = async (req, res) => {
             return res.status(403).json({ msg: "You have already attempted this quiz" });
         }
 
-        // Create a new result entry to mark the quiz as attempted
-        const result = new Result({
-            student: studentId,
-            quiz: quizId,
-            answers: [], // Empty answers initially
-            score: 0,
-            total: quiz.questions.length,
-            startedAt: new Date(),
-        });
-
-        await result.save();
-        res.json({ msg: "Quiz started successfully" });
-    } catch (err) {
-        console.error("Start quiz error:", err.message, err.stack);
-        res.status(500).json({ msg: "Failed to start quiz" });
-    }
-};
-
-// Submit Quiz
-const submitQuiz = async (req, res) => {
-    try {
-        const { quizId, answers } = req.body;
-        const studentId = req.user.id;
-
-        // Check if quiz exists
-        const quiz = await Quiz.findById(quizId);
-        if (!quiz) {
-            return res.status(404).json({ msg: "Quiz not found" });
-        }
-
-        // Check if quiz was started
-        const existingResult = await Result.findOne({ student: studentId, quiz: quizId });
-        if (!existingResult) {
-            return res.status(403).json({ msg: "Quiz not started or invalid attempt" });
-        }
-
-        // Prevent re-submission
-        if (existingResult.submittedAt) {
-            return res.status(403).json({ msg: "Quiz already submitted" });
-        }
-
-        // Calculate score
+        // Create a new result entry
         let score = 0;
         quiz.questions.forEach((q, idx) => {
             if (q.answer === answers[idx]) score++;
         });
 
-        // Update the existing result
-        existingResult.answers = answers;
-        existingResult.score = score;
-        existingResult.submittedAt = new Date();
+        const result = new Result({
+            student: studentId,
+            quiz: quizId,
+            answers,
+            score,
+            total: quiz.questions.length,
+            startedAt: new Date(),
+            submittedAt: new Date(),
+        });
 
-        await existingResult.save();
+        await result.save();
         res.json({ msg: "Quiz submitted successfully", score, total: quiz.questions.length });
     } catch (err) {
         console.error("Submit quiz error:", err.message, err.stack);
@@ -210,6 +174,5 @@ module.exports = {
     updateQuiz,
     deleteQuiz,
     toggleQuizVisibility,
-    startQuiz,
     submitQuiz
 };
