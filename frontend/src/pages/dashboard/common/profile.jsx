@@ -38,6 +38,15 @@ function Profile() {
         fetchProfile();
     }, [navigate]);
 
+    useEffect(() => {
+        if (popup.message) {
+            const timer = setTimeout(() => {
+                setPopup({ message: "", type: "success" });
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [popup.message]);
+
     const formatName = (value) => {
         if (!value) return value;
         const trimmed = value.trim();
@@ -45,11 +54,6 @@ function Profile() {
     };
 
     const formatBranch = (value) => {
-        if (!value) return value;
-        return value.trim().toUpperCase();
-    };
-
-    const formatDivision = (value) => {
         if (!value) return value;
         return value.trim().toUpperCase();
     };
@@ -76,9 +80,8 @@ function Profile() {
     };
 
     const validateDivision = (division) => {
-        const trimmedDivision = division.trim();
-        if (!trimmedDivision) return "Division is required";
-        if (trimmedDivision.length > 2) return "Division must be 2 characters or less";
+        if (!division) return "Division is required";
+        if (!["A", "B", "C", "D"].includes(division)) return "Division must be A, B, C, or D";
         return "";
     };
 
@@ -92,6 +95,24 @@ function Profile() {
     const validateYear = (year) => {
         if (!year) return "Year is required";
         if (!["FY", "SY", "TY", "FOURTH"].includes(year)) return "Invalid year";
+        return "";
+    };
+
+    const validatePassword = (password) => {
+        const trimmedPassword = password.trim();
+        if (!trimmedPassword) return "New Password is required";
+        if (trimmedPassword.length < 8) return "New Password must be at least 8 characters long";
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%_*?&])[A-Za-z\d@$!%_*?&]{8,}$/;
+        if (!passwordRegex.test(trimmedPassword)) {
+            return "New Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character";
+        }
+        return "";
+    };
+
+    const validateConfirmPassword = (confirmPassword) => {
+        const trimmedConfirmPassword = confirmPassword.trim();
+        if (!trimmedConfirmPassword) return "Confirm New Password is required";
+        if (trimmedConfirmPassword !== newPassword) return "New passwords do not match";
         return "";
     };
 
@@ -129,8 +150,8 @@ function Profile() {
             surname: formatName(editedUser.surname),
             ...(user.role === "user" && {
                 branch: formatBranch(editedUser.branch),
-                division: formatDivision(editedUser.division),
-                rollNo: editedUser.rollNo?.toString().trim(),
+                division: editedUser.division,
+                rollNo: editedUser.rollNo ? Number(editedUser.rollNo) : undefined, // Ensure rollNo is a number
                 year: editedUser.year,
             }),
         };
@@ -147,7 +168,7 @@ function Profile() {
             setIsEditing(false);
         } catch (err) {
             console.error("Profile update error:", err.response?.data || err.message);
-            setPopup({ message: err.response?.data?.msg || "Update failed", type: "error" });
+            setPopup({ message: err.response?.data?.msg || "Failed to update profile", type: "error" });
         }
     };
 
@@ -156,33 +177,16 @@ function Profile() {
             setPopup({ message: "Please enter your current password", type: "error" });
             return;
         }
-        const trimmedNewPassword = newPassword.trim();
-        if (!trimmedNewPassword) {
-            setPopup({ message: "New Password is required", type: "error" });
-            return;
-        }
-        if (trimmedNewPassword.length < 8) {
-            setPopup({ message: "New Password must be at least 8 characters long", type: "error" });
-            return;
-        }
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-        if (!passwordRegex.test(trimmedNewPassword)) {
-            setPopup({ message: "New Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character", type: "error" });
-            return;
-        }
-        const trimmedConfirmPassword = confirmNewPassword.trim();
-        if (!trimmedConfirmPassword) {
-            setPopup({ message: "Confirm New Password is required", type: "error" });
-            return;
-        }
-        if (trimmedConfirmPassword !== trimmedNewPassword) {
-            setPopup({ message: "New passwords do not match", type: "error" });
+        const passwordError = validatePassword(newPassword);
+        const confirmPasswordError = validateConfirmPassword(confirmNewPassword);
+        if (passwordError || confirmPasswordError) {
+            setPopup({ message: [passwordError, confirmPasswordError].filter(Boolean).join("<br />"), type: "error" });
             return;
         }
 
         try {
             const token = localStorage.getItem("token");
-            await API.post("/auth/change-password", { currentPassword, newPassword: trimmedNewPassword }, {
+            await API.post("/auth/change-password", { currentPassword, newPassword: newPassword.trim() }, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setPopup({ message: "Password changed successfully!", type: "success" });
@@ -190,7 +194,8 @@ function Profile() {
             setNewPassword("");
             setConfirmNewPassword("");
         } catch (err) {
-            setPopup({ message: err.response?.data?.msg || "Password change failed", type: "error" });
+            console.error("Password change error:", err.response?.data || err.message);
+            setPopup({ message: err.response?.data?.msg || "Failed to change password", type: "error" });
         }
     };
 
@@ -267,15 +272,27 @@ function Profile() {
                             </div>
                             <div>
                                 <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Division</label>
-                                <input
-                                    type="text"
-                                    name="division"
-                                    value={editedUser.division || ""}
-                                    onChange={handleChange}
-                                    maxLength={2}
-                                    readOnly={!isEditing}
-                                    className={`w-full p-2 sm:p-3 border border-gray-300 rounded-lg text-xs sm:text-sm ${!isEditing ? "bg-gray-100" : "focus:outline-none focus:ring-2 focus:ring-blue-500"}`}
-                                />
+                                {isEditing ? (
+                                    <select
+                                        name="division"
+                                        value={editedUser.division || ""}
+                                        onChange={handleChange}
+                                        className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    >
+                                        <option value="">Select Division</option>
+                                        <option value="A">A</option>
+                                        <option value="B">B</option>
+                                        <option value="C">C</option>
+                                        <option value="D">D</option>
+                                    </select>
+                                ) : (
+                                    <input
+                                        type="text"
+                                        value={editedUser.division || ""}
+                                        readOnly
+                                        className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg bg-gray-100 text-xs sm:text-sm"
+                                    />
+                                )}
                             </div>
                             <div>
                                 <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Roll Number</label>
@@ -350,7 +367,7 @@ function Profile() {
                             <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">New Password</label>
                             <input
                                 type={showNewPassword ? "text" : "password"}
-                                placeholder="New Password"
+                                placeholder="New Password (8+ chars, mixed case, number, special char)"
                                 className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}

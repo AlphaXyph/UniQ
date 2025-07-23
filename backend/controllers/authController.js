@@ -11,30 +11,93 @@ function generateRandomString(length = 16) {
     return crypto.randomBytes(Math.ceil(length / 2)).toString("hex").slice(0, length);
 }
 
+// Validate email format and domain
+const validateEmail = (email) => {
+    const lowerCaseEmail = email.toLowerCase().trim();
+    if (!lowerCaseEmail) return "Email is required";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(lowerCaseEmail)) return "Invalid email format";
+    if (!lowerCaseEmail.endsWith("@ves.ac.in")) return "Email must end with @ves.ac.in";
+    return "";
+};
+
+// Validate password
+const validatePassword = (password) => {
+    const trimmedPassword = password.trim();
+    if (!trimmedPassword) return "Password is required";
+    if (trimmedPassword.length < 8) return "Password must be at least 8 characters long";
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%_*?&])[A-Za-z\d@$!%_*?&]{8,}$/;
+    if (!passwordRegex.test(trimmedPassword)) {
+        return "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character";
+    }
+    return "";
+};
+
 // Register user
 async function register(req, res) {
     const { email, password, role, name, surname, branch, division, rollNo, year } = req.body;
 
     try {
-        const exists = await User.findOne({ email });
+        // Validate email
+        const emailError = validateEmail(email);
+        if (emailError) return res.status(400).json({ msg: emailError });
+
+        // Validate password
+        const passwordError = validatePassword(password);
+        if (passwordError) return res.status(400).json({ msg: passwordError });
+
+        // Validate role
+        if (!["admin", "user"].includes(role)) {
+            return res.status(400).json({ msg: "Role must be admin or user" });
+        }
+
+        // Validate fields for user role
+        if (role === "user") {
+            if (!name || name.trim().length > 20) {
+                return res.status(400).json({ msg: "Name is required and must be 20 characters or less" });
+            }
+            if (!surname || surname.trim().length > 20) {
+                return res.status(400).json({ msg: "Surname is required and must be 20 characters or less" });
+            }
+            if (!branch || branch.trim().length > 4) {
+                return res.status(400).json({ msg: "Branch is required and must be 4 characters or less" });
+            }
+            if (!["A", "B", "C", "D"].includes(division)) {
+                return res.status(400).json({ msg: "Division must be one of A, B, C, or D" });
+            }
+            if (!rollNo || isNaN(rollNo) || rollNo < 1 || rollNo > 999) {
+                return res.status(400).json({ msg: "Roll No is required and must be a number between 1 and 999" });
+            }
+            if (!["FY", "SY", "TY", "FOURTH"].includes(year)) {
+                return res.status(400).json({ msg: "Year must be one of FY, SY, TY, or FOURTH" });
+            }
+        }
+
+        const exists = await User.findOne({ email: email.toLowerCase().trim() });
         if (exists) return res.status(400).json({ msg: "Email already registered" });
 
         const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+        const hashedPassword = await bcrypt.hash(password.trim(), salt);
 
         const newUser = new User({
-            email,
+            email: email.toLowerCase().trim(),
             password: hashedPassword,
             role,
-            name,
-            surname,
-            ...(role === "user" && { branch, division, rollNo, year }),
+            name: name ? name.trim() : undefined,
+            surname: surname ? surname.trim() : undefined,
+            ...(role === "user" && {
+                branch: branch ? branch.trim().toUpperCase() : undefined,
+                division,
+                rollNo: Number(rollNo), // Ensure rollNo is a number
+                year,
+            }),
         });
-        await newUser.save();
 
+        await newUser.save();
         res.status(201).json({ msg: "User registered successfully" });
     } catch (err) {
-        res.status(500).json({ msg: "Server error" });
+        console.error("Register error:", err.message);
+        res.status(500).json({ msg: `Server error: ${err.message}` });
     }
 }
 
@@ -43,7 +106,15 @@ async function login(req, res) {
     const { email, password } = req.body;
 
     try {
-        const user = await User.findOne({ email });
+        // Validate email
+        const emailError = validateEmail(email);
+        if (emailError) return res.status(400).json({ msg: emailError });
+
+        // Validate password
+        const passwordError = validatePassword(password);
+        if (passwordError) return res.status(400).json({ msg: passwordError });
+
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
         if (!user) return res.status(400).json({ msg: "Invalid email or password" });
 
         const match = await bcrypt.compare(password, user.password);
@@ -97,7 +168,12 @@ async function refreshToken(req, res) {
 async function requestPasswordReset(req, res) {
     try {
         const { email } = req.body;
-        const user = await User.findOne({ email });
+
+        // Validate email
+        const emailError = validateEmail(email);
+        if (emailError) return res.status(400).json({ msg: emailError });
+
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
         if (!user) {
             return res.status(404).json({ msg: "User not found" });
         }
@@ -126,8 +202,16 @@ async function resetPassword(req, res) {
     try {
         const { email, otp, newPassword } = req.body;
 
+        // Validate email
+        const emailError = validateEmail(email);
+        if (emailError) return res.status(400).json({ msg: emailError });
+
+        // Validate new password
+        const passwordError = validatePassword(newPassword);
+        if (passwordError) return res.status(400).json({ msg: passwordError });
+
         // Find OTP record
-        const otpRecord = await Otp.findOne({ email });
+        const otpRecord = await Otp.findOne({ email: email.toLowerCase().trim() });
         if (!otpRecord) {
             return res.status(400).json({ msg: "OTP not found or expired" });
         }
@@ -138,17 +222,12 @@ async function resetPassword(req, res) {
             return res.status(400).json({ msg: "Invalid OTP" });
         }
 
-        // Validate new password
-        if (newPassword.length < 8) {
-            return res.status(400).json({ msg: "Password must be at least 8 characters long" });
-        }
-
         // Update user password
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await User.findOneAndUpdate({ email }, { password: hashedPassword });
+        await User.findOneAndUpdate({ email: email.toLowerCase().trim() }, { password: hashedPassword });
 
         // Delete OTP record
-        await Otp.deleteOne({ email });
+        await Otp.deleteOne({ email: email.toLowerCase().trim() });
 
         res.status(200).json({ msg: "Password reset successfully" });
     } catch (err) {
@@ -176,6 +255,11 @@ async function updateProfile(req, res) {
         const user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ msg: "User not found" });
 
+        // Validate division for user role
+        if (user.role === "user" && division && !["A", "B", "C", "D"].includes(division)) {
+            return res.status(400).json({ msg: "Division must be one of A, B, C, or D" });
+        }
+
         user.name = name || user.name;
         user.surname = surname || user.surname;
         if (user.role === "user") {
@@ -192,16 +276,33 @@ async function updateProfile(req, res) {
     }
 }
 
-// Change password
 async function changePassword(req, res) {
     const { currentPassword, newPassword } = req.body;
 
     try {
+        // Check for missing fields
+        if (!currentPassword) {
+            return res.status(400).json({ msg: "Current password is required" });
+        }
+        if (!newPassword) {
+            return res.status(400).json({ msg: "New password is required" });
+        }
+
+        // Validate new password
+        const passwordError = validatePassword(newPassword);
+        if (passwordError) {
+            return res.status(400).json({ msg: passwordError });
+        }
+
         const user = await User.findById(req.user.id);
-        if (!user) return res.status(404).json({ msg: "User not found" });
+        if (!user) {
+            return res.status(404).json({ msg: "User not found" });
+        }
 
         const match = await bcrypt.compare(currentPassword, user.password);
-        if (!match) return res.status(401).json({ msg: "Current password is incorrect" });
+        if (!match) {
+            return res.status(401).json({ msg: "Current password is incorrect" });
+        }
 
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(newPassword, salt);
@@ -209,7 +310,8 @@ async function changePassword(req, res) {
 
         res.json({ msg: "Password changed successfully" });
     } catch (err) {
-        res.status(500).json({ msg: "Server error" });
+        console.error("Change password error:", err.message);
+        res.status(500).json({ msg: "Server error: " + err.message });
     }
 }
 

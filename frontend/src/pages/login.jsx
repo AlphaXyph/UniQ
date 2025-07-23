@@ -43,6 +43,10 @@ function Login() {
         const trimmedPassword = value.trim();
         if (!trimmedPassword) return "Password is required";
         if (trimmedPassword.length < 8) return "Password must be at least 8 characters long";
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%_*?&])[A-Za-z\d@$!%_*?&]{8,}$/;
+        if (!passwordRegex.test(trimmedPassword)) {
+            return "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character";
+        }
         return "";
     };
 
@@ -126,7 +130,7 @@ function Login() {
                         <div className="relative">
                             <input
                                 type={showPassword ? "text" : "password"}
-                                placeholder="Password (8+ chars)"
+                                placeholder="Password (8+ chars, mixed case, number, special char)"
                                 className={`w-full p-2 sm:p-3 border ${errors.password ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
