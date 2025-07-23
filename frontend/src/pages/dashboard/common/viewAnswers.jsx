@@ -9,17 +9,35 @@ function ViewAnswers() {
     const [result, setResult] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success" });
+    const user = JSON.parse(localStorage.getItem("user"));
+    const isAdmin = user?.role === "admin";
 
     useEffect(() => {
         const fetchAnswers = async () => {
             setIsLoading(true);
             try {
                 const token = localStorage.getItem("token");
-                const res = await API.get(`/result/answers/${resultId}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                console.log("Result answers:", res.data.answers); // Debug log
-                setResult(res.data);
+                let canView = true;
+
+                if (!isAdmin) {
+                    const canViewRes = await API.get(`/result/can-view-answers/${resultId}`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    canView = canViewRes.data.canView;
+                }
+
+                if (canView || isAdmin) {
+                    const res = await API.get(`/result/answers/${resultId}`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    console.log("Result answers:", res.data.answers); // Debug log
+                    setResult(res.data);
+                } else {
+                    setPopup({
+                        message: "You can view answers only after 6 hours from submission.",
+                        type: "warning",
+                    });
+                }
             } catch (err) {
                 setPopup({
                     message: err.response?.data?.msg || "Error loading answers",
@@ -30,7 +48,7 @@ function ViewAnswers() {
             }
         };
         fetchAnswers();
-    }, [resultId]);
+    }, [resultId, isAdmin]);
 
     const closePopup = () => {
         setPopup({ message: "", type: "success" });
@@ -58,6 +76,8 @@ function ViewAnswers() {
                 </div>
                 {isLoading ? (
                     <p className="text-gray-500 text-xs sm:text-sm">Loading answers...</p>
+                ) : !result && !isAdmin && !popup.message ? (
+                    <p className="text-gray-500 text-xs sm:text-sm">Answers are not yet available (6-hour restriction).</p>
                 ) : !result ? (
                     <p className="text-gray-500 text-xs sm:text-sm">No answers available.</p>
                 ) : (
@@ -75,7 +95,15 @@ function ViewAnswers() {
                                     className="p-2 sm:p-3 bg-gray-50 rounded-md shadow-md text-xs sm:text-sm"
                                 >
                                     <p className="font-semibold">{index + 1}. {answer.question}</p>
-                                    <ul className="ml-4 list-disc">
+                                    {answer.questionImage && (
+                                        <img
+                                            src={answer.questionImage}
+                                            alt={`Question ${index + 1}`}
+                                            className="w-full max-w-xs h-auto object-contain mx-auto my-2"
+                                        />
+                                    )}
+                                    <hr className="border-gray-300 my-2" />
+                                    <ul className="ml-4 mt-2">
                                         {answer.options.map((option, optIndex) => (
                                             <li
                                                 key={optIndex}
@@ -86,7 +114,26 @@ function ViewAnswers() {
                                                         : "text-gray-600"
                                                     }`}
                                             >
-                                                {option}
+                                                {option.image ? (
+                                                    <div className="flex flex-col items-start">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium text-gray-700">{optIndex + 1}.</span>
+                                                            <img
+                                                                src={option.image}
+                                                                alt={`Option ${optIndex + 1}`}
+                                                                className="w-16 h-16 object-contain"
+                                                            />
+                                                        </div>
+                                                        {option.text && (
+                                                            <span className="ml-6 mt-1">{option.text}</span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-medium text-gray-700">{optIndex + 1}.</span>
+                                                        <span>{option.text || "No text"}</span>
+                                                    </div>
+                                                )}
                                             </li>
                                         ))}
                                     </ul>

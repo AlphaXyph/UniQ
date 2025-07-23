@@ -18,9 +18,9 @@ UniQuiz/
 │   │   │   │   │   ├── attemptQuiz.jsx          # Attempt Quiz page
 │   │   │   │   │   └── result.jsx               # Result page for users
 │   │   │   │   │
-│   │   │   │   ├── common/                  # Pages shared between user and admin
-│   │   │   │   │   ├── home.jsx                 # Home page component
-│   │   │   │   │   └── profile.jsx              # Profile page
+│   │   │   │   └── common/                  # Pages shared between user and admin
+│   │   │   │       ├── home.jsx                 # Home page component
+│   │   │   │       └── profile.jsx              # Profile page
 │   │   │   │
 │   │   │   ├── login.jsx                    # Login page
 │   │   │   ├── register.jsx                 # User registration page

@@ -43,13 +43,16 @@ const AIChatbot = ({ onClose, importQuestions }) => {
     useEffect(() => {
         if (step === "checkApiKey") {
             if (apiKey) {
-                addAIMessage("Checking for existing API key...");
+                addAIMessage("Checking for existing Gemini API key...");
                 validateApiKey(apiKey).then((isValid) => {
                     if (isValid) {
-                        addAIMessage("Validating Existing API Key...");
+                        addAIMessage("Validating Existing Gemini API Key...");
                         setTimeout(() => {
-                            addAIMessage("API key is still valid! What is the subject of the quiz?");
-                            setStep("subject");
+                            addAIMessage("Gemini API key is still valid!");
+                            setTimeout(() => {
+                                addAIMessage("Hello, I am your AI assistant here to help you create questions for quiz. May I know what is subject of the quiz?")
+                                setStep("subject");
+                            }, 2000);
                         }, 1000);
                     } else {
                         addAIMessage("Seems like your API key isn't working anymore... No worries, we will help you get a new one.");
@@ -102,13 +105,16 @@ Do you have an API key, or need help with generating one?
             return;
         }
         setMessages((prev) => [...prev, { sender: "user", text: currentInput }]);
-        addAIMessage("Validating API key... Please wait...");
+        addAIMessage("Validating Gemini API key... Please wait...");
         const isValid = await validateApiKey(currentInput);
         if (isValid) {
             setApiKey(currentInput);
             localStorage.setItem("geminiApiKey", currentInput);
-            addAIMessage("API key validated successfully! Now, what is the subject of the quiz?");
-            setStep("subject");
+            addAIMessage("API key validated successfully!");
+            setTimeout(() => {
+                addAIMessage("Now, what is the subject of the quiz?");
+                setStep("subject");
+            }, 1000);
         } else {
             addAIMessage("Seems like this isn't a working key. Please try again.");
         }

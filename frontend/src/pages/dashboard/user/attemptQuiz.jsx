@@ -433,7 +433,6 @@ function AttemptQuiz({ setIsQuizActive }) {
                         console.log(`Minor violation: ${type}, new violationCount: ${newCount}`);
                         setPopup({ message: `Violation: ${type}. Attempts left: ${MAX_VIOLATIONS - newCount}`, type: "error" });
                         popupTimeoutRef.current = setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
-                        // Only show overlay for fullscreen exit violations
                         if (type === "Fullscreen exited") {
                             setShowOverlay(true);
                         }
@@ -489,7 +488,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                 if (!document.hasFocus()) {
                     lastFocusLossTime.current = now;
                     console.log("Focus loss detected via polling");
-                    setCountdown(FOCUS_GRACE_PERIOD / 1000); // Start countdown at 5 seconds
+                    setCountdown(FOCUS_GRACE_PERIOD / 1000);
                     setShowOverlay(true);
                     setPopup({
                         message: `Please return focus to the quiz window within ${FOCUS_GRACE_PERIOD / 1000} seconds. Attempts left: ${MAX_VIOLATIONS - violationCount}`,
@@ -545,14 +544,12 @@ function AttemptQuiz({ setIsQuizActive }) {
                 const key = e.key.toLowerCase();
                 console.log(`Keydown detected: key=${key}, ctrlKey=${e.ctrlKey}, metaKey=${e.metaKey}, shiftKey=${e.shiftKey}, altKey=${e.altKey}`);
 
-                // Major violations (auto-submit)
                 if ((e.ctrlKey || e.metaKey) && (key === "t" || key === "n")) {
                     e.preventDefault();
                     handleViolation(`Attempt to open new ${key === "t" ? "tab" : "window"}`, true);
                     return;
                 }
 
-                // Minor violations
                 if (
                     key === "escape" ||
                     key === "meta" ||
@@ -771,10 +768,36 @@ function AttemptQuiz({ setIsQuizActive }) {
                     <p className="text-sm sm:text-base text-gray-600">Subject: {quiz.subject}</p>
                     {quiz.questions.map((q, i) => (
                         <div key={q._id || i} className="p-4 sm:p-6 border border-gray-200 rounded-lg bg-gray-50 shadow-md">
-                            <p className="font-semibold text-xs sm:text-sm">{i + 1}. {q.question}</p>
-                            {q.options.map((opt, j) => (
-                                <p key={j} className="ml-2 text-xs sm:text-sm">{j + 1}. {opt} {q.answer === j ? <span className="text-green-600">(✔️ Correct)</span> : ""}</p>
-                            ))}
+                            <p className="font-semibold text-xs sm:text-sm mb-2">Question {i + 1}</p>
+                            {q.questionImage && (
+                                <img
+                                    src={q.questionImage}
+                                    alt={`Question ${i + 1}`}
+                                    className="w-full max-w-xs h-auto object-contain mx-auto mb-2"
+                                />
+                            )}
+                            <p className="text-xs sm:text-sm mb-4">{q.question || ""}</p>
+                            <hr className="border-gray-300 mb-4" />
+                            <div className="space-y-3">
+                                {q.options.map((opt, j) => (
+                                    <div key={j} className="flex flex-col gap-1 text-xs sm:text-sm">
+                                        {opt.image && (
+                                            <div className="flex items-start gap-2">
+                                                <span className="text-sm text-gray-600 font-medium self-start mt-1">{j + 1}.</span>
+                                                <img
+                                                    src={opt.image}
+                                                    alt={`Option ${j + 1}`}
+                                                    className="w-16 h-16 object-contain"
+                                                />
+                                            </div>
+                                        )}
+                                        <p>
+                                            {!opt.image && <span className="text-sm text-gray-600 font-medium mr-2">{j + 1}.</span>}
+                                            {opt.text || ""} {q.answer === j ? <span className="text-green-600">(✔️ Correct)</span> : ""}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     ))}
                     <button
@@ -862,20 +885,48 @@ function AttemptQuiz({ setIsQuizActive }) {
                 )}
                 {quiz.questions.map((q, i) => (
                     <div key={q._id || i} className="p-4 sm:p-6 border border-gray-200 rounded-lg bg-gray-100 shadow-md">
-                        <p className="font-semibold text-xs sm:text-sm">{i + 1}. {q.question}</p>
-                        {q.options.map((opt, j) => (
-                            <label key={j} className="block mt-2 text-xs sm:text-sm">
-                                <input
-                                    type="radio"
-                                    name={`q${i}`}
-                                    checked={answers[i] === j}
-                                    onChange={() => handleOptionChange(i, j)}
-                                    disabled={timeLeft === 0 || isSubmitted}
-                                    className="mr-2"
-                                />
-                                <span>{opt}</span>
-                            </label>
-                        ))}
+                        <p className="font-semibold text-xs sm:text-sm mb-2">Question {i + 1}</p>
+                        {q.questionImage && (
+                            <img
+                                src={q.questionImage}
+                                alt={`Question ${i + 1}`}
+                                className="w-full max-w-xs h-auto object-contain mx-auto mb-2"
+                            />
+                        )}
+                        <p className="text-xs sm:text-sm mb-4">{q.question || ""}</p>
+                        <hr className="border-gray-300 mb-4" />
+                        <div className="space-y-3">
+                            {q.options.map((opt, j) => (
+                                <label key={j} className="block text-xs sm:text-sm">
+                                    <div className="flex flex-col gap-2">
+                                        {opt.image && (
+                                            <div className="flex items-start gap-2">
+                                                <span className="text-sm text-gray-600 font-medium self-start mt-1">{j + 1}.</span>
+                                                <img
+                                                    src={opt.image}
+                                                    alt={`Option ${j + 1}`}
+                                                    className="w-16 h-16 object-contain"
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="flex items-center space-x-2 pl-6">
+                                            <input
+                                                type="radio"
+                                                name={`q${i}`}
+                                                checked={answers[i] === j}
+                                                onChange={() => handleOptionChange(i, j)}
+                                                disabled={timeLeft === 0 || isSubmitted}
+                                                className="mr-2"
+                                            />
+                                            <span>
+                                                {!opt.image && <span className="text-sm text-gray-600 font-medium mr-2">{j + 1}.</span>}
+                                                {opt.text || ""}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
                     </div>
                 ))}
                 <button

@@ -1,5 +1,6 @@
 const Quiz = require("../models/quiz");
 const Result = require("../models/result");
+const cloudinary = require("../configs/cloudinary")
 
 const createQuiz = async (req, res) => {
     try {
@@ -25,7 +26,6 @@ const getAllQuizzes = async (req, res) => {
             .select("-questions.answer")
             .populate("createdBy", "email");
 
-        // For users, check which quizzes they've attempted
         let quizzesWithAttemptStatus = quizzes;
         if (req.user.role === "user") {
             const results = await Result.find({ student: req.user.id }).select("quiz");
@@ -51,12 +51,10 @@ const getQuiz = async (req, res) => {
             return res.status(403).json({ msg: "Quiz is not visible" });
         }
 
-        // Check if the user has already attempted the quiz
         const hasAttempted = req.user.role === "user"
             ? await Result.findOne({ student: req.user.id, quiz: req.params.quizId }) !== null
             : false;
 
-        // Remove correct answers for non-admin users
         if (req.user.role !== "admin") {
             quiz.questions = quiz.questions.map((q) => ({ ...q._doc, answer: undefined }));
         }
@@ -80,6 +78,32 @@ const updateQuiz = async (req, res) => {
         if (!title || !questions || questions.length === 0 || !timer || timer < 1 || !subject) {
             return res.status(400).json({ msg: "Title, questions, valid timer, and subject are required" });
         }
+
+        // Collect existing image URLs to check for deletions
+        const existingImages = [];
+        quiz.questions.forEach((q) => {
+            if (q.questionImage) existingImages.push(q.questionImage);
+            q.options.forEach((opt) => {
+                if (opt.image) existingImages.push(opt.image);
+            });
+        });
+
+        // Collect new image URLs
+        const newImages = [];
+        questions.forEach((q) => {
+            if (q.questionImage) newImages.push(q.questionImage);
+            q.options.forEach((opt) => {
+                if (opt.image) newImages.push(opt.image);
+            });
+        });
+
+        // Delete images that are no longer used
+        const imagesToDelete = existingImages.filter((img) => !newImages.includes(img));
+        for (const imageUrl of imagesToDelete) {
+            const publicId = imageUrl.split('/').pop().split('.')[0]; // Extract public ID from URL
+            await cloudinary.uploader.destroy(`quiz_images/${publicId}`);
+        }
+
         const updatedQuiz = await Quiz.findByIdAndUpdate(
             req.params.quizId,
             { subject, title, questions, timer, isVisible },
@@ -100,6 +124,21 @@ const deleteQuiz = async (req, res) => {
         if (quiz.createdBy.toString() !== req.user.id) {
             return res.status(403).json({ msg: "You can only delete quizzes you created" });
         }
+
+        // Delete all associated images from Cloudinary
+        for (const question of quiz.questions) {
+            if (question.questionImage) {
+                const publicId = question.questionImage.split('/').pop().split('.')[0];
+                await cloudinary.uploader.destroy(`quiz_images/${publicId}`);
+            }
+            for (const option of question.options) {
+                if (option.image) {
+                    const publicId = option.image.split('/').pop().split('.')[0];
+                    await cloudinary.uploader.destroy(`quiz_images/${publicId}`);
+                }
+            }
+        }
+
         await Quiz.findByIdAndDelete(req.params.quizId);
         await Result.deleteMany({ quiz: req.params.quizId });
         res.json({ msg: "Quiz deleted" });
@@ -131,19 +170,16 @@ const submitQuiz = async (req, res) => {
         const { quizId, answers } = req.body;
         const studentId = req.user.id;
 
-        // Check if quiz exists
         const quiz = await Quiz.findById(quizId);
         if (!quiz) {
             return res.status(404).json({ msg: "Quiz not found" });
         }
 
-        // Check if already attempted
         const existingResult = await Result.findOne({ student: studentId, quiz: quizId });
         if (existingResult) {
             return res.status(403).json({ msg: "You have already attempted this quiz" });
         }
 
-        // Create a new result entry
         let score = 0;
         quiz.questions.forEach((q, idx) => {
             if (q.answer === answers[idx]) score++;

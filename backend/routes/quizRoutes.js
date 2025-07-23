@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
+const { upload, uploadImage } = require("../services/imageUpload");
 const {
     createQuiz,
     getAllQuizzes,
@@ -18,5 +19,6 @@ router.post("/update/:quizId", authMiddleware, updateQuiz);
 router.delete("/:quizId", authMiddleware, deleteQuiz);
 router.post("/toggle-visibility/:quizId", authMiddleware, toggleQuizVisibility);
 router.post("/submit", authMiddleware, submitQuiz);
+router.post("/upload-image", authMiddleware, upload.single("image"), uploadImage);
 
 module.exports = router;

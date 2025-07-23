@@ -9,7 +9,7 @@ function CreateQuiz() {
     const [questions, setQuestions] = useState([]);
     const [timer, setTimer] = useState(5);
     const [subject, setSubject] = useState("");
-    const [subjects, setSubjects] = useState(JSON.parse(localStorage.getItem("subjects")) || ["TESTING", "UXDD", "BDAV"]);
+    const [subjects, setSubjects] = useState(JSON.parse(localStorage.getItem("subjects")) || []);
     const [newSubjectName, setNewSubjectName] = useState("");
     const [showNewSubjectInput, setShowNewSubjectInput] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -19,11 +19,11 @@ function CreateQuiz() {
     const [displayedText, setDisplayedText] = useState("");
     const [isTyping, setIsTyping] = useState(true);
     const fileInputRef = useRef(null);
+    const imageInputRefs = useRef({});
     const user = JSON.parse(localStorage.getItem("user"));
 
     const fullText = "Hello! Would you like my help in creating a quiz?";
 
-    // Handle typing and backspace animation
     useEffect(() => {
         if (isChatbotOpen || !showSpeechBubble) {
             setShowSpeechBubble(false);
@@ -36,21 +36,19 @@ function CreateQuiz() {
         let currentIndex = displayedText.length;
 
         if (isTyping) {
-            // Typing animation
             if (currentIndex < fullText.length) {
                 timer = setInterval(() => {
                     setDisplayedText(fullText.slice(0, currentIndex + 1));
                     currentIndex++;
                     if (currentIndex >= fullText.length) {
                         clearInterval(timer);
-                        setTimeout(() => setIsTyping(false), 1000); // Pause before backspacing
+                        setTimeout(() => setIsTyping(false), 1000);
                     }
-                }, 50); // Typing speed
+                }, 50);
             } else {
-                setTimeout(() => setIsTyping(false), 1000); // Trigger backspace if already at end
+                setTimeout(() => setIsTyping(false), 1000);
             }
         } else {
-            // Backspace animation
             if (currentIndex > 0) {
                 timer = setInterval(() => {
                     setDisplayedText(fullText.slice(0, currentIndex - 1));
@@ -58,12 +56,12 @@ function CreateQuiz() {
                     if (currentIndex <= 0) {
                         clearInterval(timer);
                         setShowSpeechBubble(false);
-                        setIsTyping(true); // Reset for next cycle
+                        setIsTyping(true);
                     }
-                }, 30); // Backspace speed
+                }, 30);
             } else {
                 setShowSpeechBubble(false);
-                setIsTyping(true); // Reset for next cycle
+                setIsTyping(true);
             }
         }
 
@@ -84,11 +82,37 @@ function CreateQuiz() {
                             const validCorrectIndex = isNaN(correctIndex) || correctIndex < 1 || correctIndex > 4 ? 0 : correctIndex - 1;
                             return {
                                 question: row.question || "",
-                                options: [row.optionA || "", row.optionB || "", row.optionC || "", row.optionD || ""],
+                                questionImage: row.questionImage || null,
+                                options: [
+                                    { text: row.optionA || `Option 1`, image: row.optionAImage || null },
+                                    { text: row.optionB || `Option 2`, image: row.optionBImage || null },
+                                    { text: row.optionC || `Option 3`, image: row.optionCImage || null },
+                                    { text: row.optionD || `Option 4`, image: row.optionDImage || null },
+                                ],
                                 answer: validCorrectIndex,
                             };
                         });
-                    setQuestions((prev) => [...prev, ...formatted]);
+                    if (questions.length > 0) {
+                        setPopup({
+                            message: "Do you want to append(A) these questions to the existing ones or replace(R) them? Type 'A' or 'R'.",
+                            type: "success",
+                            confirmAction: (input) => {
+                                if (input === "A") {
+                                    setQuestions((prev) => [...prev, ...formatted]);
+                                    setPopup({ message: "Questions appended!", type: "success", confirmAction: null, confirmInput: "" });
+                                } else if (input === "R") {
+                                    setQuestions(formatted);
+                                    setPopup({ message: "Questions replaced!", type: "success", confirmAction: null, confirmInput: "" });
+                                } else {
+                                    setPopup({ message: "Please type 'A' or 'R' in capital letter.", type: "error", confirmAction: null, confirmInput: "" });
+                                }
+                            },
+                            confirmInput: "",
+                        });
+                    } else {
+                        setQuestions(formatted);
+                        setPopup({ message: "Questions uploaded!", type: "success", confirmAction: null, confirmInput: "" });
+                    }
                     if (fileInputRef.current) {
                         fileInputRef.current.value = "";
                     }
@@ -129,11 +153,71 @@ function CreateQuiz() {
     };
 
     const handleAddQuestion = () => {
-        setQuestions((prev) => [...prev, { question: "", options: ["", "", "", ""], answer: 0 }]);
+        setQuestions((prev) => [...prev, {
+            question: "",
+            questionImage: null,
+            options: [
+                { text: "", image: null },
+                { text: "", image: null },
+                { text: "", image: null },
+                { text: "", image: null },
+            ],
+            answer: 0
+        }]);
     };
 
     const handleRemoveQuestion = (index) => {
         setQuestions((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleImageUpload = async (e, questionIndex, optionIndex = null) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append("image", file);
+
+        try {
+            const token = localStorage.getItem("token");
+            const response = await API.post("/quiz/upload-image", formData, {
+                headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+            });
+            const imageUrl = response.data.imageUrl;
+
+            setQuestions((prev) => {
+                const copy = [...prev];
+                if (optionIndex === null) {
+                    copy[questionIndex].questionImage = imageUrl;
+                } else {
+                    copy[questionIndex].options[optionIndex].image = imageUrl;
+                }
+                return copy;
+            });
+
+            const inputKey = optionIndex === null ? `question-${questionIndex}` : `option-${questionIndex}-${optionIndex}`;
+            if (imageInputRefs.current[inputKey]) {
+                imageInputRefs.current[inputKey].value = "";
+            }
+        } catch (err) {
+            setPopup({ message: err.response?.data?.msg || "Failed to upload image", type: "error", confirmAction: null, confirmInput: "" });
+        }
+    };
+
+    const handleRemoveImage = (questionIndex, optionIndex = null) => {
+        setQuestions((prev) => {
+            const copy = [...prev];
+            if (optionIndex === null) {
+                copy[questionIndex].questionImage = null;
+            } else {
+                copy[questionIndex].options[optionIndex].image = null;
+            }
+            return copy;
+        });
+
+        const inputKey = optionIndex === null ? `question-${questionIndex}` : `option-${questionIndex}-${optionIndex}`;
+        if (imageInputRefs.current[inputKey]) {
+            imageInputRefs.current[inputKey].value = "";
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -150,16 +234,42 @@ function CreateQuiz() {
             setPopup({ message: "Timer must be at least 1 minute", type: "error", confirmAction: null, confirmInput: "" });
             return;
         }
-        const validQuestions = questions.filter(
-            (q) => q.question.trim() !== "" && q.options.some((opt) => opt.trim() !== "")
+
+        // Check if any question has both empty text and no image
+        for (let i = 0; i < questions.length; i++) {
+            if (questions[i].question.trim() === "" && !questions[i].questionImage) {
+                setPopup({
+                    message: `Question no. ${i + 1} cannot have empty question.`,
+                    type: "error",
+                    confirmAction: null,
+                    confirmInput: ""
+                });
+                return;
+            }
+        }
+
+        // Update questions with default option texts if empty
+        const updatedQuestions = questions.map((q) => ({
+            ...q,
+            options: q.options.map((opt, j) => ({
+                ...opt,
+                text: opt.text.trim() === "" ? `Option ${j + 1}` : opt.text
+            }))
+        }));
+
+        const validQuestions = updatedQuestions.filter(
+            (q) => q.question.trim() !== "" || q.questionImage !== null || q.options.some((opt) => opt.text.trim() !== "" || opt.image !== null)
         );
+
         if (validQuestions.length === 0) {
-            setPopup({ message: "At least one question with non-empty options is required", type: "error", confirmAction: null, confirmInput: "" });
+            setPopup({ message: "At least one question with non-empty content is required", type: "error", confirmAction: null, confirmInput: "" });
             return;
         }
-        if (validQuestions.length < questions.length) {
-            setPopup({ message: "Blank questions or questions with empty options have been removed", type: "error", confirmAction: null, confirmInput: "" });
+        if (validQuestions.length < updatedQuestions.length) {
+            setPopup({ message: "Blank questions or questions with empty content have been removed", type: "error", confirmAction: null, confirmInput: "" });
+            setQuestions(validQuestions);
         }
+
         try {
             const token = localStorage.getItem("token");
             await API.post(
@@ -183,7 +293,13 @@ function CreateQuiz() {
     const importGeneratedQuestions = (generatedQuestions) => {
         const formattedQuestions = generatedQuestions.map((q) => ({
             question: q.question,
-            options: [q.optionA, q.optionB, q.optionC, q.optionD],
+            questionImage: q.questionImage || null,
+            options: [
+                { text: q.optionA || "Option 1", image: q.optionAImage || null },
+                { text: q.optionB || "Option 2", image: q.optionBImage || null },
+                { text: q.optionC || "Option 3", image: q.optionCImage || null },
+                { text: q.optionD || "Option 4", image: q.optionDImage || null },
+            ],
             answer: parseInt(q.correct, 10) - 1,
         }));
         setQuestions((prev) => [...prev, ...formattedQuestions]);
@@ -196,9 +312,9 @@ function CreateQuiz() {
         setPopup({ message: "", type: "success", confirmAction: null, confirmInput: "" });
     };
 
-    const sampleCsvContent = `question,optionA,optionB,optionC,optionD,correct
-"What is the capital of France?","Paris","London","Berlin","Madrid",1
-"What is 2 + 2?","3","4","5","6",2`;
+    const sampleCsvContent = `question,questionImage,optionA,optionAImage,optionB,optionBImage,optionC,optionCImage,optionD,optionDImage,correct
+"What is the capital of France?","","Paris","","London","","Berlin","","Madrid","",1
+"What is 2 + 2?","","3","","4","","5","","6","",2`;
 
     const handleDownloadSample = () => {
         const blob = new Blob([sampleCsvContent], { type: "text/csv" });
@@ -210,6 +326,22 @@ function CreateQuiz() {
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
+    };
+
+    const adjustTextareaRows = (textarea, index, optionIndex = null) => {
+        const lines = textarea.value.split('\n').length;
+        const minRows = 1;
+        const maxRows = 50;
+        const newRows = Math.max(minRows, Math.min(maxRows, lines));
+        textarea.rows = newRows;
+
+        const copy = [...questions];
+        if (optionIndex !== null) {
+            copy[index].options[optionIndex].text = textarea.value || "";
+        } else {
+            copy[index].question = textarea.value;
+        }
+        setQuestions(copy);
     };
 
     return (
@@ -345,47 +477,94 @@ function CreateQuiz() {
                     </div>
                     {questions.length > 0 ? (
                         questions.map((q, i) => (
-                            <div key={i} className="border border-gray-300 p-2 sm:p-3 bg-white rounded-md shadow-md space-y-2 relative">
-                                <button
-                                    type="button"
-                                    className="absolute top-2 sm:top-3 right-2 sm:right-3 text-red-500 hover:text-red-700 text-base p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition z-10"
-                                    onClick={() => handleRemoveQuestion(i)}
-                                    aria-label={`Remove question ${i + 1}`}
-                                >
-                                    <i className="fas fa-trash"></i>
-                                </button>
-                                <div className="flex flex-col gap-1 sm:gap-2">
-                                    <label className="block font-semibold text-xs sm:text-sm text-gray-700">Question:</label>
-                                    <input
-                                        type="text"
-                                        placeholder={`Question ${i + 1}`}
-                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                                        value={q.question}
-                                        onChange={(e) => {
-                                            const copy = [...questions];
-                                            copy[i].question = e.target.value;
-                                            setQuestions(copy);
-                                        }}
-                                    />
+                            <div key={i} className="border border-gray-200 p-4 bg-gray-50 rounded-lg shadow-sm space-y-4 relative mt-4">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="font-semibold text-sm sm:text-base text-green-600">Question {i + 1}</h3>
+                                    <button
+                                        type="button"
+                                        className="text-red-500 hover:text-red-700 text-base p-1.5 rounded-full hover:bg-gray-100 transition"
+                                        onClick={() => handleRemoveQuestion(i)}
+                                        aria-label={`Remove question ${i + 1}`}
+                                    >
+                                        <i className="fas fa-trash"></i>
+                                    </button>
                                 </div>
-                                <div className="flex flex-col gap-1 sm:gap-2">
+                                <div className="space-y-2">
+                                    <label className="block font-semibold text-xs sm:text-sm text-gray-700">Question:</label>
+                                    <textarea
+                                        placeholder={`Question ${i + 1}`}
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                                        value={q.question}
+                                        onChange={(e) => adjustTextareaRows(e.target, i)}
+                                        rows={1}
+                                    />
+                                    {q.questionImage && (
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <img src={q.questionImage} alt="Question" className="w-24 h-24 object-contain rounded" />
+                                            <button
+                                                type="button"
+                                                className="text-red-500 hover:text-red-700 text-sm p-1 rounded-full hover:bg-gray-100 transition"
+                                                onClick={() => handleRemoveImage(i)}
+                                                aria-label="Remove question image"
+                                            >
+                                                <i className="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    )}
+                                    <label className="inline-block px-2 py-1 bg-blue-500 text-white rounded-md cursor-pointer hover:bg-blue-600 text-xs text-center">
+                                        <i className="fas fa-image mr-1"></i> Add Image
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => handleImageUpload(e, i)}
+                                            className="hidden"
+                                            ref={(el) => (imageInputRefs.current[`question-${i}`] = el)}
+                                        />
+                                    </label>
+                                </div>
+                                <div className="space-y-2">
                                     <label className="block font-semibold text-xs sm:text-sm text-gray-700">Options:</label>
                                     {q.options.map((opt, j) => (
-                                        <input
-                                            key={j}
-                                            type="text"
-                                            placeholder={`Option ${j + 1}`}
-                                            className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                                            value={opt}
-                                            onChange={(e) => {
-                                                const copy = [...questions];
-                                                copy[i].options[j] = e.target.value;
-                                                setQuestions(copy);
-                                            }}
-                                        />
+                                        <div key={j} className="flex items-start gap-2">
+                                            <span className="text-sm text-gray-600 w-8 pt-2">{j + 1}.</span>
+                                            <div className="flex-1 space-y-2">
+                                                {opt.image && (
+                                                    <div className="flex items-center gap-2">
+                                                        <img src={opt.image} alt={`Option ${j + 1}`} className="w-16 h-16 object-contain rounded" />
+                                                        <button
+                                                            type="button"
+                                                            className="text-red-500 hover:text-red-700 text-sm p-1 rounded-full hover:bg-gray-100 transition"
+                                                            onClick={() => handleRemoveImage(i, j)}
+                                                            aria-label={`Remove option ${j + 1} image`}
+                                                        >
+                                                            <i className="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                <div className="flex items-start gap-2">
+                                                    <textarea
+                                                        placeholder={`Option ${j + 1}`}
+                                                        className="flex-1 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                                                        value={opt.text}
+                                                        onChange={(e) => adjustTextareaRows(e.target, i, j)}
+                                                        rows={1}
+                                                    />
+                                                    <label className="inline-block px-2 py-1 bg-blue-500 text-white rounded-md cursor-pointer hover:bg-blue-600 text-xs text-center self-start">
+                                                        <i className="fas fa-image mr-1"></i> Add Image
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={(e) => handleImageUpload(e, i, j)}
+                                                            className="hidden"
+                                                            ref={(el) => (imageInputRefs.current[`option-${i}-${j}`] = el)}
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
-                                <div className="flex flex-col gap-1 sm:gap-2">
+                                <div className="space-y-2">
                                     <label className="block font-semibold text-xs sm:text-sm text-gray-700">Answer:</label>
                                     <select
                                         value={q.answer}
@@ -394,7 +573,7 @@ function CreateQuiz() {
                                             copy[i].answer = Number(e.target.value);
                                             setQuestions(copy);
                                         }}
-                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                                     >
                                         {[0, 1, 2, 3].map((n) => (
                                             <option key={n} value={n}>
@@ -427,9 +606,9 @@ function CreateQuiz() {
                 <div className="fixed bottom-4 right-4 z-50">
                     <div className="relative">
                         {showSpeechBubble && !isChatbotOpen && (
-                            <div className="absolute right-14 bottom-0 bg-blue-600 text-white text-sm sm:text-base md:text-md rounded-lg px-3 py-2 shadow-md w-44 sm:w-56 md:w-80">
+                            <div className="absolute right-14 bottom-0 bg-blue-500 text-white text-sm sm:text-base md:text-md rounded-lg px-3 py-2 shadow-md w-44 sm:w-56 md:w-80">
                                 <span className="block">{displayedText}</span>
-                                <div className="absolute top-1/2 right-[-6px] w-3 h-3 bg-blue-600 transform rotate-45 -translate-y-1/2"></div>
+                                <div className="absolute top-1/2 right-[-6px] w-3 h-3 bg-blue-500 transform rotate-45 -translate-y-1/2"></div>
                             </div>
                         )}
                         <button
