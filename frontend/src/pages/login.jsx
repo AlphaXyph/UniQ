@@ -14,9 +14,12 @@ function Login() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-    }, []);
+        const token = localStorage.getItem("token");
+        if (token) {
+            console.log("Login: Found token, redirescting to dashboard");
+            navigate("/dashboard", { replace: true });
+        }
+    }, [navigate]);
 
     useEffect(() => {
         let timer;
