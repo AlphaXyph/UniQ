@@ -10,6 +10,13 @@ function AllReports() {
     const [order, setOrder] = useState("asc");
     const [isLoading, setIsLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [subjectTopicQuery, setSubjectTopicQuery] = useState("");
+    const [showFilters, setShowFilters] = useState(false);
+    const [yearFilter, setYearFilter] = useState("");
+    const [branchFilter, setBranchFilter] = useState("");
+    const [divisionFilter, setDivisionFilter] = useState("");
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
 
     const fetchResults = useCallback(async () => {
         setIsLoading(true);
@@ -26,6 +33,7 @@ function AllReports() {
                 year: r.year || "N/A",
                 branch: r.branch || "N/A",
                 division: r.division || "N/A",
+                from: `${r.year || "N/A"}-${r.branch || "N/A"}-${r.division || "N/A"}`,
                 subject: r.quiz?.subject || "Unknown",
                 topic: r.quiz?.title || "Unknown",
                 score: `${r.score ?? 0}/${r.total ?? 0}`,
@@ -43,14 +51,37 @@ function AllReports() {
         fetchResults();
     }, [fetchResults]);
 
-    const handleSortChange = (e) => {
-        const { name, value } = e.target;
-        if (name === "sortBy") setSortBy(value);
-        if (name === "order") setOrder(value);
+    const handleSortChange = (value) => {
+        setSortBy(value);
+    };
+
+    const toggleOrder = () => {
+        setOrder((prev) => (prev === "asc" ? "desc" : "asc"));
     };
 
     const handleSearchChange = (e) => {
         setSearchQuery(e.target.value);
+    };
+
+    const handleSubjectTopicSearchChange = (e) => {
+        setSubjectTopicQuery(e.target.value);
+    };
+
+    const handleFilterChange = (e) => {
+        const { name, value } = e.target;
+        if (name === "year") setYearFilter(value);
+        if (name === "branch") setBranchFilter(value);
+        if (name === "division") setDivisionFilter(value);
+        if (name === "fromDate") setFromDate(value);
+        if (name === "toDate") setToDate(value);
+    };
+
+    const clearFilters = () => {
+        setYearFilter("");
+        setBranchFilter("");
+        setDivisionFilter("");
+        setFromDate("");
+        setToDate("");
     };
 
     const closePopup = () => {
@@ -68,13 +99,24 @@ function AllReports() {
     const groupedResults = useMemo(() => {
         const filtered = results.filter((entry) => {
             const searchLower = searchQuery.toLowerCase();
-            return (
+            const matchesSearch =
                 String(entry.name || "").toLowerCase().includes(searchLower) ||
                 String(entry.rollNo || "").toLowerCase().includes(searchLower) ||
-                String(entry.division || "").toLowerCase().includes(searchLower) ||
-                String(entry.branch || "").toLowerCase().includes(searchLower) ||
-                String(entry.year || "").toLowerCase().includes(searchLower)
-            );
+                String(entry.email || "").toLowerCase().includes(searchLower);
+            const subjectTopicLower = subjectTopicQuery.toLowerCase();
+            const matchesSubjectTopic =
+                !subjectTopicQuery ||
+                String(`${entry.subject} - ${entry.topic}`.toLowerCase()).includes(subjectTopicLower);
+            const matchesYear = !yearFilter || entry.year === yearFilter;
+            const matchesBranch = !branchFilter || String(entry.branch || "").toLowerCase().includes(branchFilter.toLowerCase());
+            const matchesDivision = !divisionFilter || entry.division === divisionFilter;
+            const matchesDate =
+                !fromDate ||
+                !toDate ||
+                (entry.createdAt &&
+                    new Date(entry.createdAt).toLocaleDateString("en-US") >= new Date(fromDate).toLocaleDateString("en-US") &&
+                    new Date(entry.createdAt).toLocaleDateString("en-US") <= new Date(toDate).toLocaleDateString("en-US"));
+            return matchesSearch && matchesSubjectTopic && matchesYear && matchesBranch && matchesDivision && matchesDate;
         });
 
         const sortedByDate = filtered.slice().sort((a, b) => {
@@ -107,12 +149,12 @@ function AllReports() {
                         valA = a.name.split(" ")[1]?.toLowerCase() || "";
                         valB = b.name.split(" ")[1]?.toLowerCase() || "";
                     }
-                } else if (sortBy === "year") {
-                    valA = parseInt(valA, 10) || 0;
-                    valB = parseInt(valB, 10) || 0;
                 } else if (sortBy === "score") {
                     valA = parseInt(a.score.split("/")[0], 10) / (parseInt(a.score.split("/")[1], 10) || 1);
                     valB = parseInt(b.score.split("/")[0], 10) / (parseInt(b.score.split("/")[1], 10) || 1);
+                } else if (sortBy === "rollNo") {
+                    valA = parseInt(valA, 10) || 0;
+                    valB = parseInt(valB, 10) || 0;
                 }
                 if (order === "asc") {
                     return valA > valB ? 1 : valA < valB ? -1 : 0;
@@ -122,7 +164,7 @@ function AllReports() {
         });
 
         return grouped;
-    }, [results, sortBy, order, searchQuery]);
+    }, [results, sortBy, order, searchQuery, subjectTopicQuery, yearFilter, branchFilter, divisionFilter, fromDate, toDate]);
 
     const sortedDates = useMemo(() => {
         return Object.keys(groupedResults).sort((a, b) => {
@@ -133,12 +175,12 @@ function AllReports() {
     }, [groupedResults]);
 
     const downloadCSV = () => {
-        const headers = ["rollNo,name,year,branch,division,subject,topic,marks,total,createdAt"];
+        const headers = ["Roll No,Name,Year,Branch,Division,Subject,Topic,Marks,Total,Submission Time"];
         const rows = sortedDates
             .flatMap((date) => groupedResults[date])
             .map((entry) => {
                 const [marks, total] = entry.score.split("/").map(Number);
-                const createdAt = entry.createdAt
+                const submissionTime = entry.createdAt
                     ? new Date(entry.createdAt).toLocaleString("en-US", {
                         year: "numeric",
                         month: "long",
@@ -158,7 +200,7 @@ function AllReports() {
                     `"${String(entry.topic || "Unknown")}"`,
                     marks,
                     total,
-                    `"${createdAt}"`,
+                    `"${submissionTime}"`,
                 ].join(",");
             });
         const csvContent = [headers, ...rows].join("\n");
@@ -174,113 +216,221 @@ function AllReports() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 p-2 sm:p-4 md:p-5">
-            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-2 sm:p-4 md:p-5">
+        <div className="min-h-screen bg-gray-100 p-4 sm:p-6 md:p-8">
+            <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-4 sm:p-6">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} />
-                <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
-                    <i className="fas fa-chart-bar text-base sm:text-lg"></i> All Quiz Results
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2 mb-4">
+                    <i className="fas fa-chart-bar text-xl sm:text-2xl"></i> All Quiz Results
                 </h2>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 mb-2 sm:mb-3">
-                    <div className="flex flex-col w-full">
-                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Search:</label>
+
+                {/* SEARCH + FILTER SECTION */}
+                <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
+                    <div className="flex-1">
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={handleSearchChange}
-                            placeholder="Name, Roll, Branch, Div or Year"
-                            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            placeholder="Search by Name, Roll No, or Email"
+                            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         />
                     </div>
-                    <div className="flex flex-col w-full">
-                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Sort by:</label>
-                        <select
-                            name="sortBy"
-                            value={sortBy}
-                            onChange={handleSortChange}
-                            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                    <div className="flex-1 flex gap-4">
+                        <input
+                            type="text"
+                            value={subjectTopicQuery}
+                            onChange={handleSubjectTopicSearchChange}
+                            placeholder="Search by Subject - Topic"
+                            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className="px-4 py-2 flex items-center justify-center gap-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium transition duration-200 whitespace-nowrap"
                         >
-                            <option value="name">Name</option>
-                            <option value="rollNo">Roll No</option>
-                            <option value="division">Division</option>
-                            <option value="branch">Branch</option>
-                            <option value="year">Year</option>
-                            <option value="score">Score</option>
-                        </select>
-                    </div>
-                    <div className="flex flex-col w-full">
-                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Order:</label>
-                        <select
-                            name="order"
-                            value={order}
-                            onChange={handleSortChange}
-                            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                        >
-                            <option value="asc">Ascending</option>
-                            <option value="desc">Descending</option>
-                        </select>
+                            <i className="fas fa-filter"></i>
+                        </button>
                     </div>
                 </div>
-                <div className="mb-3 sm:mb-4">
+                {showFilters && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4 p-4 bg-gray-50 rounded-md">
+                        <div>
+                            <label className="block mb-1 font-semibold text-sm text-gray-700">Year</label>
+                            <select
+                                name="year"
+                                value={yearFilter}
+                                onChange={handleFilterChange}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            >
+                                <option value="">All Years</option>
+                                <option value="FY">FY</option>
+                                <option value="SY">SY</option>
+                                <option value="TY">TY</option>
+                                <option value="FOURTH">FOURTH</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block mb-1 font-semibold text-sm text-gray-700">Branch</label>
+                            <input
+                                type="text"
+                                name="branch"
+                                value={branchFilter}
+                                onChange={handleFilterChange}
+                                placeholder="Enter Branch"
+                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block mb-1 font-semibold text-sm text-gray-700">Division</label>
+                            <select
+                                name="division"
+                                value={divisionFilter}
+                                onChange={handleFilterChange}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            >
+                                <option value="">All Divisions</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block mb-1 font-semibold text-sm text-gray-700">From Date</label>
+                            <input
+                                type="date"
+                                name="fromDate"
+                                value={fromDate}
+                                onChange={handleFilterChange}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block mb-1 font-semibold text-sm text-gray-700">To Date</label>
+                            <input
+                                type="date"
+                                name="toDate"
+                                value={toDate}
+                                onChange={handleFilterChange}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            />
+                        </div>
+                        <div className="flex items-end gap-2">
+                            <div className="flex-1">
+                                <label className="block mb-1 font-semibold text-sm text-gray-700">Sort By</label>
+                                <select
+                                    name="sortBy"
+                                    value={sortBy}
+                                    onChange={(e) => handleSortChange(e.target.value)}
+                                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                >
+                                    <option value="name">Name</option>
+                                    <option value="rollNo">Roll No</option>
+                                    <option value="score">Score</option>
+                                </select>
+                            </div>
+                            <button
+                                onClick={toggleOrder}
+                                className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 transition duration-200"
+                            >
+                                <i className={`fas fa-arrow-${order === "asc" ? "up" : "down"} text-lg`}></i>
+                            </button>
+                        </div>
+                        <div className="col-span-full flex justify-end">
+                            <button
+                                onClick={clearFilters}
+                                className="px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm transition"
+                            >
+                                <i className="fas fa-times"></i> Clear Filters
+                            </button>
+                        </div>
+                    </div>
+                )}
+                <div className="flex gap-4 mb-4">
                     <button
                         onClick={downloadCSV}
-                        className="w-auto flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs sm:text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
+                        className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
                         disabled={isLoading || sortedDates.length === 0}
                     >
-                        <i className="fas fa-download text-base p-1"></i>
-                        <span>Download CSV</span>
+                        <i className="fas fa-download"></i> Download CSV
                     </button>
                 </div>
                 {isLoading ? (
-                    <p className="text-gray-500 text-xs sm:text-sm">Loading results...</p>
+                    <p className="text-gray-500 text-sm">Loading results...</p>
                 ) : sortedDates.length === 0 ? (
-                    <p className="text-gray-500 text-xs sm:text-sm">
-                        {searchQuery ? "No results match your search." : "No results available."}
+                    <p className="text-gray-500 text-sm">
+                        {searchQuery || subjectTopicQuery || yearFilter || branchFilter || divisionFilter || fromDate || toDate
+                            ? "No results match your search or filters."
+                            : "No results available."}
                     </p>
                 ) : (
                     sortedDates.map((date) => (
-                        <div key={date} className="mb-3 sm:mb-4">
-                            <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">{date}</h3>
-                            <ul className="space-y-2">
-                                {groupedResults[date].map((entry, index) => (
-                                    <li
-                                        key={`${date}-${index}`}
-                                        className="p-2 sm:p-3 bg-gray-50 rounded-md shadow-md flex flex-col gap-2 text-xs sm:text-sm"
-                                    >
-                                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                                            <div>
-                                                <strong>{entry.rollNo}</strong>:{" "}
-                                                <span className="group relative">
-                                                    <strong>{entry.name}</strong>
-                                                    <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 -top-8 left-0 z-10">
-                                                        {entry.email || "No Email"}
+                        <div key={date} className="mb-6">
+                            <h3 className="text-sm font-semibold text-gray-700 mb-2">{date}</h3>
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse text-sm">
+                                    <thead>
+                                        <tr className="bg-gray-200">
+                                            <th className="p-2 text-left font-semibold">Roll No</th>
+                                            <th className="p-2 text-left font-semibold">Name</th>
+                                            <th className="p-2 text-left font-semibold">From</th>
+                                            <th className="p-2 text-left font-semibold w-32">Subject</th>
+                                            <th className="p-2 text-left font-semibold w-32">Topic</th>
+                                            <th className="p-2 text-left font-semibold">Score</th>
+                                            <th className="p-2 text-left font-semibold">Time</th>
+                                            <th className="p-2 text-left font-semibold">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {groupedResults[date].map((entry, index) => (
+                                            <tr key={`${date}-${index}`} className="border-b hover:bg-gray-50">
+                                                <td className="p-2">{entry.rollNo}</td>
+                                                <td className="p-2">
+                                                    <span className="group relative">
+                                                        {entry.name}
+                                                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 -top-8 left-0 z-10">
+                                                            {entry.email}
+                                                        </span>
                                                     </span>
-                                                </span>{" "}
-                                                from <strong>{entry.year}-{entry.branch}-{entry.division}</strong> attempted{" "}
-                                                <strong>
-                                                    {entry.subject} - {entry.topic}
-                                                </strong>{" "}
-                                                and scored{" "}
-                                                <strong className={getScoreColor(entry.score)}>{entry.score}</strong>
-                                            </div>
-                                            <span className="text-xs text-gray-500">
-                                                {entry.createdAt
-                                                    ? new Date(entry.createdAt).toLocaleTimeString("en-US", {
-                                                        hour: "2-digit",
-                                                        minute: "2-digit",
-                                                        hour12: true,
-                                                    })
-                                                    : "N/A"}
-                                            </span>
-                                        </div>
-                                        <Link
-                                            to={`/dashboard/view-answers/${entry.resultId}`}
-                                            className="text-blue-600 hover:text-blue-800 mt-1 place-items-center text-xs sm:text-sm flex items-center gap-1 w-fit"
-                                        >
-                                            <i className="fa-solid fa-magnifying-glass"></i> View Answers
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
+                                                </td>
+                                                <td className="p-2">{entry.from}</td>
+                                                <td className="p-2 w-32 truncate">
+                                                    <span className="group relative">
+                                                        {entry.subject}
+                                                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 -top-8 left-0 z-10">
+                                                            {entry.subject}
+                                                        </span>
+                                                    </span>
+                                                </td>
+                                                <td className="p-2 w-32 truncate">
+                                                    <span className="group relative">
+                                                        {entry.topic}
+                                                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 -top-8 left-0 z-10">
+                                                            {entry.topic}
+                                                        </span>
+                                                    </span>
+                                                </td>
+                                                <td className={getScoreColor(entry.score) + " p-2"}>{entry.score}</td>
+                                                <td className="p-2">
+                                                    {entry.createdAt
+                                                        ? new Date(entry.createdAt).toLocaleTimeString("en-US", {
+                                                            hour: "2-digit",
+                                                            minute: "2-digit",
+                                                            hour12: true,
+                                                        })
+                                                        : "N/A"}
+                                                </td>
+                                                <td className="p-2">
+                                                    <Link
+                                                        to={`/dashboard/view-answers/${entry.resultId}`}
+                                                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm"
+                                                    >
+                                                        <i className="fa-solid fa-magnifying-glass"></i> View Answers
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     ))
                 )}

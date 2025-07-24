@@ -7,7 +7,7 @@ function Result() {
     const [results, setResults] = useState([]);
     const [canViewAnswersMap, setCanViewAnswersMap] = useState({});
     const [popup, setPopup] = useState({ message: "", type: "success" });
-    const [searchTerm, setSearchTerm] = useState("");
+    const [subjectTopicQuery, setSubjectTopicQuery] = useState("");
 
     useEffect(() => {
         const fetchResults = async () => {
@@ -18,7 +18,6 @@ function Result() {
                 });
                 setResults(res.data);
 
-                // Fetch canViewAnswers status for each result
                 const viewAnswersPromises = res.data.map(async (result) => {
                     try {
                         const response = await API.get(`/result/can-view-answers/${result._id}`, {
@@ -42,6 +41,10 @@ function Result() {
         };
         fetchResults();
     }, []);
+
+    const handleSubjectTopicSearchChange = (e) => {
+        setSubjectTopicQuery(e.target.value);
+    };
 
     const closePopup = () => {
         setPopup({ message: "", type: "success" });
@@ -83,74 +86,91 @@ function Result() {
     const filteredResults = Object.entries(groupedResults).reduce((acc, [date, results]) => {
         const filtered = results.filter(
             (r) =>
-                r.quiz?.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                r.quiz?.title?.toLowerCase().includes(searchTerm.toLowerCase())
+                !subjectTopicQuery ||
+                String(`${r.quiz?.subject || ""} - ${r.quiz?.title || ""}`.toLowerCase()).includes(subjectTopicQuery.toLowerCase())
         );
         if (filtered.length > 0) acc[date] = filtered;
         return acc;
     }, {});
 
     return (
-        <div className="min-h-screen bg-gray-100 p-2 sm:p-4 md:p-5">
-            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-2 sm:p-4 md:p-5">
+        <div className="min-h-screen bg-gray-100 p-4 sm:p-6 md:p-8">
+            <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-4 sm:p-6">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} />
-                <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
-                    <i className="fas fa-chart-bar text-base sm:text-lg"></i> Your Results
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i className="fas fa-chart-bar text-xl sm:text-2xl"></i> Your Results
                 </h2>
-                <div className="mb-3 sm:mb-4">
-                    <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">
-                        Search by Subject or Title
-                    </label>
+                <div className="mb-4">
                     <input
                         type="text"
-                        placeholder="Search by subject or title"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                        value={subjectTopicQuery}
+                        onChange={handleSubjectTopicSearchChange}
+                        placeholder="Search by Subject - Topic"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     />
                 </div>
                 {sortedDates.length === 0 && (
-                    <p className="text-gray-500 text-xs sm:text-sm">No results found.</p>
+                    <p className="text-gray-500 text-sm">No results found.</p>
                 )}
                 {sortedDates.map((date) =>
                     filteredResults[date] ? (
-                        <div key={date} className="mb-3 sm:mb-4">
-                            <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">{date}</h3>
-                            <ul className="space-y-2">
-                                {filteredResults[date].map((r) => (
-                                    <li
-                                        key={r._id}
-                                        className="p-2 sm:p-3 bg-gray-50 rounded-md shadow-md flex flex-col gap-2 text-xs sm:text-sm"
-                                    >
-                                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                                            <div>
-                                                In <strong>{r.quiz?.subject || "No Subject"}</strong> -{" "}
-                                                <strong>{r.quiz?.title || "Deleted Quiz"}</strong> you scored{" "}
-                                                <span className={getScoreColor(r.score, r.total)}>
-                                                    {r.score}/{r.total}
-                                                </span>
-                                            </div>
-                                            <span className="text-xs text-gray-500">
-                                                {r.createdAt
-                                                    ? new Date(r.createdAt).toLocaleTimeString("en-US", {
-                                                        hour: "2-digit",
-                                                        minute: "2-digit",
-                                                        hour12: true,
-                                                    })
-                                                    : "N/A"}
-                                            </span>
-                                        </div>
-                                        {canViewAnswersMap[r._id] && (
-                                            <Link
-                                                to={`/dashboard/view-answers/${r._id}`}
-                                                className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm flex items-center gap-1 w-fit"
-                                            >
-                                                <i className="fa-solid fa-magnifying-glass"></i> View Answers
-                                            </Link>
-                                        )}
-                                    </li>
-                                ))}
-                            </ul>
+                        <div key={date} className="mb-6">
+                            <h3 className="text-sm font-semibold text-gray-700 mb-2">{date}</h3>
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse text-sm">
+                                    <thead>
+                                        <tr className="bg-gray-200">
+                                            <th className="p-2 text-left font-semibold w-32">Subject</th>
+                                            <th className="p-2 text-left font-semibold w-32">Topic</th>
+                                            <th className="p-2 text-left font-semibold">Score</th>
+                                            <th className="p-2 text-left font-semibold">Time</th>
+                                            <th className="p-2 text-left font-semibold">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredResults[date].map((r) => (
+                                            <tr key={r._id} className="border-b hover:bg-gray-50">
+                                                <td className="p-2 w-32 truncate">
+                                                    <span className="group relative">
+                                                        {r.quiz?.subject || "No Subject"}
+                                                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 -top-8 left-0 z-10">
+                                                            {r.quiz?.subject || "No Subject"}
+                                                        </span>
+                                                    </span>
+                                                </td>
+                                                <td className="p-2 w-32 truncate">
+                                                    <span className="group relative">
+                                                        {r.quiz?.title || "Deleted Quiz"}
+                                                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 -top-8 left-0 z-10">
+                                                            {r.quiz?.title || "Deleted Quiz"}
+                                                        </span>
+                                                    </span>
+                                                </td>
+                                                <td className={getScoreColor(r.score, r.total) + " p-2"}>{`${r.score}/${r.total}`}</td>
+                                                <td className="p-2">
+                                                    {r.createdAt
+                                                        ? new Date(r.createdAt).toLocaleTimeString("en-US", {
+                                                            hour: "2-digit",
+                                                            minute: "2-digit",
+                                                            hour12: true,
+                                                        })
+                                                        : "N/A"}
+                                                </td>
+                                                <td className="p-2">
+                                                    {canViewAnswersMap[r._id] && (
+                                                        <Link
+                                                            to={`/dashboard/view-answers/${r._id}`}
+                                                            className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm"
+                                                        >
+                                                            <i className="fa-solid fa-magnifying-glass"></i> View Answers
+                                                        </Link>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     ) : null
                 )}

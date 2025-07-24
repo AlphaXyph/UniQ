@@ -868,7 +868,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                     </div>
                 </div>
             </div>
-            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6 mt-16 sm:mt-20">
+            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6 mt-10 sm:mt-15">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} />
                 {showOverlay && !isSubmitted && (
                     <div className="fixed inset-0 w-full h-full bg-black/80 flex flex-col items-center justify-center z-[9999]">
