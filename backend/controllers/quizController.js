@@ -1,6 +1,7 @@
 const Quiz = require("../models/quiz");
 const Result = require("../models/result");
 const cloudinary = require("../configs/cloudinary");
+const User = require("../models/user"); // Import User model
 
 const createQuiz = async (req, res) => {
     try {
@@ -194,6 +195,12 @@ const submitQuiz = async (req, res) => {
             return res.status(403).json({ msg: "You have already attempted this quiz" });
         }
 
+        // Fetch user to get rollNo, year, branch, and division
+        const user = await User.findById(studentId);
+        if (!user) {
+            return res.status(404).json({ msg: "User not found" });
+        }
+
         let score = 0;
         quiz.questions.forEach((q, idx) => {
             if (q.answer === answers[idx]) score++;
@@ -205,6 +212,10 @@ const submitQuiz = async (req, res) => {
             answers,
             score,
             total: quiz.questions.length,
+            rollNo: user.rollNo,
+            year: user.year,
+            branch: user.branch,
+            division: user.division,
             startedAt: new Date(),
             submittedAt: new Date(),
         });

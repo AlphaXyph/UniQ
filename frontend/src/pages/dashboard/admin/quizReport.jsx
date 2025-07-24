@@ -181,7 +181,7 @@ function QuizReport() {
             <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-2 sm:p-4 md:p-5">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} />
                 <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
-                    <i className="fas fa-chart-bar text-base sm:text-lg"></i> Quiz Report
+                    <i className="fas fa-chart-bar text-base sm:text-lg"></i> Quiz Report: {quiz.subject} - {quiz.title}
                 </h2>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 mb-2 sm:mb-3">
                     <div className="flex flex-col w-full">

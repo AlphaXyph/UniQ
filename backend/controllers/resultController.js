@@ -15,7 +15,7 @@ const getAllResults = async (req, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ msg: "Admin access required" });
     try {
         const results = await Result.find()
-            .populate("student", "name surname rollNo email year branch division")
+            .populate("student", "name surname email")
             .populate("quiz", "title subject");
         const filteredResults = results.filter((r) => r.quiz && r.student);
         res.json(filteredResults);
@@ -38,27 +38,27 @@ const getQuizReport = async (req, res) => {
 
         const sortFields = {
             name: { "student.name": order === "asc" ? 1 : -1, "student.surname": order === "asc" ? 1 : -1 },
-            rollNo: { "student.rollNo": order === "asc" ? 1 : -1 },
-            division: { "student.division": order === "asc" ? 1 : -1 },
-            branch: { "student.branch": order === "asc" ? 1 : -1 },
-            year: { "student.year": order === "asc" ? 1 : -1 },
+            rollNo: { rollNo: order === "asc" ? 1 : -1 },
+            division: { division: order === "asc" ? 1 : -1 },
+            branch: { branch: order === "asc" ? 1 : -1 },
+            year: { year: order === "asc" ? 1 : -1 },
         };
 
         const results = await Result.find({ quiz: quizId })
-            .populate("student", "name surname rollNo email year branch division")
-            .populate("quiz", "subject title")
+            .populate("student", "name surname email")
+            .populate("quiz", "title subject")
             .sort(sortFields[sortBy]);
 
         const formattedResults = results
             .filter((r) => r.quiz && r.student)
             .map((r) => ({
                 resultId: r._id,
-                rollNo: r.student.rollNo || "N/A",
+                rollNo: r.rollNo || "N/A",
                 name: `${r.student.name || "Unknown"} ${r.student.surname || ""}`.trim(),
                 email: r.student.email || "No Email",
-                year: r.student.year || "N/A",
-                branch: r.student.branch || "N/A",
-                division: r.student.division || "N/A",
+                year: r.year || "N/A",
+                branch: r.branch || "N/A",
+                division: r.division || "N/A",
                 subject: r.quiz.subject || "Unknown",
                 topic: r.quiz.title || "Unknown",
                 score: `${r.score ?? 0}/${r.total ?? 0}`,

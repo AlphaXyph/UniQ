@@ -20,12 +20,12 @@ function AllReports() {
             });
             const formattedResults = res.data.map((r) => ({
                 resultId: r._id,
-                rollNo: r.student?.rollNo || "N/A",
+                rollNo: r.rollNo || "N/A",
                 name: `${r.student?.name || "Unknown"} ${r.student?.surname || ""}`.trim(),
                 email: r.student?.email || "No Email",
-                year: r.student?.year || "N/A",
-                branch: r.student?.branch || "N/A",
-                division: r.student?.division || "N/A",
+                year: r.year || "N/A",
+                branch: r.branch || "N/A",
+                division: r.division || "N/A",
                 subject: r.quiz?.subject || "Unknown",
                 topic: r.quiz?.title || "Unknown",
                 score: `${r.score ?? 0}/${r.total ?? 0}`,
@@ -276,7 +276,7 @@ function AllReports() {
                                             to={`/dashboard/view-answers/${entry.resultId}`}
                                             className="text-blue-600 hover:text-blue-800 mt-1 place-items-center text-xs sm:text-sm flex items-center gap-1 w-fit"
                                         >
-                                            <i class="fa-solid fa-magnifying-glass"></i> View Answers
+                                            <i className="fa-solid fa-magnifying-glass"></i> View Answers
                                         </Link>
                                     </li>
                                 ))}
