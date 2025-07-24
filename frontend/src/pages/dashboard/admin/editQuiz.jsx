@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import API from "../../../../api";
 import Papa from "papaparse";
 import Popup from "../../../components/popup";
@@ -18,6 +18,7 @@ function EditQuiz() {
     const fileInputRef = useRef(null);
     const imageInputRefs = useRef({});
     const user = JSON.parse(localStorage.getItem("user"));
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchQuiz = async () => {
@@ -248,6 +249,7 @@ function EditQuiz() {
             );
             setQuestions(validQuestions); // Update state with valid questions
             setPopup({ message: "Quiz Updated!", type: "success", confirmAction: null, confirmInput: "" });
+            setTimeout(() => navigate("/dashboard"), 2000);
         } catch (err) {
             setPopup({ message: err.response?.data?.msg || "Failed to update quiz", type: "error", confirmAction: null, confirmInput: "" });
         }

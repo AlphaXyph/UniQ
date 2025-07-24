@@ -1,6 +1,6 @@
 const Quiz = require("../models/quiz");
 const Result = require("../models/result");
-const cloudinary = require("../configs/cloudinary")
+const cloudinary = require("../configs/cloudinary");
 
 const createQuiz = async (req, res) => {
     try {
@@ -104,12 +104,26 @@ const updateQuiz = async (req, res) => {
             await cloudinary.uploader.destroy(`quiz_images/${publicId}`);
         }
 
+        // Update the quiz
         const updatedQuiz = await Quiz.findByIdAndUpdate(
             req.params.quizId,
             { subject, title, questions, timer, isVisible },
             { new: true }
         );
-        res.json({ msg: "Quiz updated successfully" });
+
+        // Recalculate scores for all existing results
+        const results = await Result.find({ quiz: req.params.quizId });
+        for (const result of results) {
+            let score = 0;
+            updatedQuiz.questions.forEach((q, idx) => {
+                if (q.answer === result.answers[idx]) score++;
+            });
+            result.score = score;
+            result.total = updatedQuiz.questions.length;
+            await result.save();
+        }
+
+        res.json({ msg: "Quiz updated successfully, scores recalculated" });
     } catch (err) {
         console.error("Update quiz error:", err);
         res.status(500).json({ msg: "Failed to update quiz" });
