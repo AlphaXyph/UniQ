@@ -9,14 +9,14 @@ function Home() {
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, quizId: null });
     const [confirmInput, setConfirmInput] = useState("");
     const [isVisibleQuizzesOpen, setIsVisibleQuizzesOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(true); // Added loading state
+    const [isLoading, setIsLoading] = useState(true);
     const user = JSON.parse(localStorage.getItem("user")) || {};
     const role = user?.role;
     const userEmail = user?.email;
     const navigate = useNavigate();
 
     const fetchQuizzes = useCallback(async () => {
-        setIsLoading(true); // Show loader
+        setIsLoading(true);
         try {
             const token = localStorage.getItem("token");
             const res = await API.get("/quiz/all", {
@@ -30,7 +30,7 @@ function Home() {
         } catch (err) {
             setPopup({ message: err.response?.data?.msg || "Error loading quizzes", type: "error" });
         } finally {
-            setIsLoading(false); // Hide loader
+            setIsLoading(false);
         }
     }, [userEmail]);
 
@@ -81,7 +81,7 @@ function Home() {
             setPopup({ message: "Please type 'YES' to confirm deletion", type: "error" });
             return;
         }
-        setIsLoading(true); // Show loader
+        setIsLoading(true);
         try {
             const token = localStorage.getItem("token");
             await API.delete(`/quiz/${deleteConfirm.quizId}`, {
@@ -92,14 +92,14 @@ function Home() {
         } catch (err) {
             setPopup({ message: err.response?.data?.msg || "Error deleting quiz", type: "error" });
         } finally {
-            setIsLoading(false); // Hide loader
+            setIsLoading(false);
         }
         setDeleteConfirm({ show: false, quizId: null });
         setConfirmInput("");
     };
 
     const handleToggleVisibility = async (quizId, isVisible) => {
-        setIsLoading(true); // Show loader
+        setIsLoading(true);
         try {
             const token = localStorage.getItem("token");
             await API.post(
@@ -112,7 +112,7 @@ function Home() {
         } catch (err) {
             setPopup({ message: err.response?.data?.msg || "Failed to toggle visibility", type: "error" });
         } finally {
-            setIsLoading(false); // Hide loader
+            setIsLoading(false);
         }
     };
 
@@ -150,7 +150,7 @@ function Home() {
                             <button
                                 onClick={toggleVisibleQuizzes}
                                 className="w-full text-left text-base sm:text-lg font-bold text-gray-800 mb-2 sm:mb-3 flex items-center gap-2 focus:outline-none"
-                                disabled={isLoading} // Disable button during loading
+                                disabled={isLoading}
                             >
                                 <i className="fa-solid fa-list text-base sm:text-lg"></i>
                                 Ongoing Quizzes
@@ -187,6 +187,9 @@ function Home() {
                                                                     : "Date Not Available"}
                                                             </p>
                                                             <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+                                                                Academic Year: {q.academicYear || "Not set"} | Year: {q.year || "All"} | Branch: {q.branch || "All"} | Division: {q.division || "All"}
+                                                            </p>
+                                                            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
                                                                 Questions: {q.questions?.length || 0} | Time: {q.timer} min | Status: <span className="text-green-500">●</span>
                                                             </p>
                                                             <div className="flex gap-2 mt-1">
@@ -210,7 +213,7 @@ function Home() {
                                                                     onClick={() => handleToggleVisibility(q._id, q.isVisible)}
                                                                     className="text-gray-500 hover:text-gray-600 text-base p-1 rounded-full hover:bg-gray-100 transition"
                                                                     title="Hide Quiz"
-                                                                    disabled={isLoading} // Disable button during loading
+                                                                    disabled={isLoading}
                                                                 >
                                                                     <i className="fas fa-eye"></i>
                                                                 </button>
@@ -218,7 +221,7 @@ function Home() {
                                                                     onClick={() => handleEdit(q._id)}
                                                                     className="text-blue-500 hover:text-blue-700 text-base p-1 rounded-full hover:bg-gray-100 transition"
                                                                     title="Edit Quiz"
-                                                                    disabled={isLoading} // Disable button during loading
+                                                                    disabled={isLoading}
                                                                 >
                                                                     <i className="fa-solid fa-pen"></i>
                                                                 </button>
@@ -226,7 +229,7 @@ function Home() {
                                                                     onClick={() => setDeleteConfirm({ show: true, quizId: q._id })}
                                                                     className="text-red-500 hover:text-red-700 text-base p-1 rounded-full hover:bg-gray-100 transition"
                                                                     title="Delete Quiz"
-                                                                    disabled={isLoading} // Disable button during loading
+                                                                    disabled={isLoading}
                                                                 >
                                                                     <i className="fas fa-trash"></i>
                                                                 </button>
@@ -269,6 +272,9 @@ function Home() {
                                                                 Posted by: {q.createdBy?.email || "Unknown"}
                                                             </p>
                                                             <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+                                                                Academic Year: {q.academicYear || "Not set"} | Year: {q.year || "All"} | Branch: {q.branch || "All"} | Division: {q.division || "All"}
+                                                            </p>
+                                                            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
                                                                 Questions: {q.questions?.length || 0} | Time: {q.timer} min
                                                                 {role === "admin" && (
                                                                     <span> | Status: <span className={q.isVisible ? "text-green-600" : "text-orange-500"}>{q.isVisible ? "●" : "●"}</span></span>
@@ -308,7 +314,7 @@ function Home() {
                                                                     onClick={() => handleToggleVisibility(q._id, q.isVisible)}
                                                                     className={`text-${q.isVisible ? "gray" : "black"}-500 hover:text-${q.isVisible ? "gray" : "black"}-600 text-base p-1 rounded-full hover:bg-gray-100 transition`}
                                                                     title={q.isVisible ? "Hide Quiz" : "Show Quiz"}
-                                                                    disabled={isLoading} // Disable button during loading
+                                                                    disabled={isLoading}
                                                                 >
                                                                     <i className={`fas ${q.isVisible ? "fa-eye" : "fa-eye-slash"}`}></i>
                                                                 </button>
@@ -316,7 +322,7 @@ function Home() {
                                                                     onClick={() => handleEdit(q._id)}
                                                                     className="text-blue-500 hover:text-blue-700 text-base p-1 rounded-full hover:bg-gray-100 transition"
                                                                     title="Edit Quiz"
-                                                                    disabled={isLoading} // Disable button during loading
+                                                                    disabled={isLoading}
                                                                 >
                                                                     <i className="fa-solid fa-pen"></i>
                                                                 </button>
@@ -324,7 +330,7 @@ function Home() {
                                                                     onClick={() => setDeleteConfirm({ show: true, quizId: q._id })}
                                                                     className="text-red-500 hover:text-red-700 text-base p-1 rounded-full hover:bg-gray-100 transition"
                                                                     title="Delete Quiz"
-                                                                    disabled={isLoading} // Disable button during loading
+                                                                    disabled={isLoading}
                                                                 >
                                                                     <i className="fas fa-trash"></i>
                                                                 </button>

@@ -13,6 +13,15 @@ function CreateQuiz() {
     const [newSubjectName, setNewSubjectName] = useState("");
     const [showNewSubjectInput, setShowNewSubjectInput] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [academicYear, setAcademicYear] = useState("");
+    const [academicYears, setAcademicYears] = useState(JSON.parse(localStorage.getItem("academicYears")) || []);
+    const [newAcademicYearStart, setNewAcademicYearStart] = useState("");
+    const [newAcademicYearEnd, setNewAcademicYearEnd] = useState("");
+    const [showNewAcademicYearInput, setShowNewAcademicYearInput] = useState(false);
+    const [isAcademicYearDropdownOpen, setIsAcademicYearDropdownOpen] = useState(false);
+    const [year, setYear] = useState("");
+    const [branch, setBranch] = useState("");
+    const [division, setDivision] = useState("");
     const [popup, setPopup] = useState({ message: "", type: "success", confirmAction: null, confirmInput: "" });
     const [isChatbotOpen, setIsChatbotOpen] = useState(false);
     const [showSpeechBubble, setShowSpeechBubble] = useState(true);
@@ -132,6 +141,25 @@ function CreateQuiz() {
         }
     };
 
+    const addAcademicYear = () => {
+        if (newAcademicYearStart && newAcademicYearEnd) {
+            if (!/^\d{4}$/.test(newAcademicYearStart) || !/^\d{4}$/.test(newAcademicYearEnd)) {
+                setPopup({ message: "Academic year must be in format YYYY-YYYY (e.g., 2025-2026)", type: "error", confirmAction: null, confirmInput: "" });
+                return;
+            }
+            const newAcademicYear = `${newAcademicYearStart}-${newAcademicYearEnd}`;
+            if (!academicYears.includes(newAcademicYear)) {
+                const updatedAcademicYears = [...academicYears, newAcademicYear];
+                setAcademicYears(updatedAcademicYears);
+                localStorage.setItem("academicYears", JSON.stringify(updatedAcademicYears));
+                setAcademicYear(newAcademicYear);
+                setNewAcademicYearStart("");
+                setNewAcademicYearEnd("");
+                setShowNewAcademicYearInput(false);
+            }
+        }
+    };
+
     const handleDeleteSubject = (subjectToDelete) => {
         setIsDropdownOpen(false);
         setPopup({
@@ -147,6 +175,26 @@ function CreateQuiz() {
                 localStorage.setItem("subjects", JSON.stringify(updatedSubjects));
                 if (subject === subjectToDelete) setSubject("");
                 setPopup({ message: "Subject deleted", type: "success", confirmAction: null, confirmInput: "" });
+            },
+            confirmInput: "",
+        });
+    };
+
+    const handleDeleteAcademicYear = (yearToDelete) => {
+        setIsAcademicYearDropdownOpen(false);
+        setPopup({
+            message: `Are you sure you want to remove "${yearToDelete}"? Type YES to confirm.`,
+            type: "warning",
+            confirmAction: (input) => {
+                if (input !== "YES") {
+                    setPopup({ message: "Please type YES in capital letters", type: "error", confirmAction: null, confirmInput: "" });
+                    return;
+                }
+                const updatedAcademicYears = academicYears.filter((y) => y !== yearToDelete);
+                setAcademicYears(updatedAcademicYears);
+                localStorage.setItem("academicYears", JSON.stringify(updatedAcademicYears));
+                if (academicYear === yearToDelete) setAcademicYear("");
+                setPopup({ message: "Academic year deleted", type: "success", confirmAction: null, confirmInput: "" });
             },
             confirmInput: "",
         });
@@ -234,8 +282,11 @@ function CreateQuiz() {
             setPopup({ message: "Timer must be at least 1 minute", type: "error", confirmAction: null, confirmInput: "" });
             return;
         }
+        if (academicYear.trim() === "") {
+            setPopup({ message: "Academic Year is required", type: "error", confirmAction: null, confirmInput: "" });
+            return;
+        }
 
-        // Check if any question has both empty text and no image
         for (let i = 0; i < questions.length; i++) {
             if (questions[i].question.trim() === "" && !questions[i].questionImage) {
                 setPopup({
@@ -248,7 +299,6 @@ function CreateQuiz() {
             }
         }
 
-        // Update questions with default option texts if empty
         const updatedQuestions = questions.map((q) => ({
             ...q,
             options: q.options.map((opt, j) => ({
@@ -274,7 +324,7 @@ function CreateQuiz() {
             const token = localStorage.getItem("token");
             await API.post(
                 "/quiz/create",
-                { subject, title, questions: validQuestions, timer, isVisible: false },
+                { subject, title, questions: validQuestions, timer, isVisible: false, academicYear, year, branch, division },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             setPopup({ message: "Quiz Created! It is hidden by default. Go to Home to make it visible.", type: "success", confirmAction: null, confirmInput: "" });
@@ -282,6 +332,10 @@ function CreateQuiz() {
             setTitle("");
             setQuestions([]);
             setTimer(5);
+            setAcademicYear("");
+            setYear("");
+            setBranch("");
+            setDivision("");
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
@@ -304,6 +358,10 @@ function CreateQuiz() {
         }));
         setQuestions((prev) => [...prev, ...formattedQuestions]);
         setSubject(generatedQuestions[0]?.subject || subject);
+        setAcademicYear(generatedQuestions[0]?.academicYear || academicYear);
+        setYear(generatedQuestions[0]?.year || year);
+        setBranch(generatedQuestions[0]?.branch || branch);
+        setDivision(generatedQuestions[0]?.division || division);
         setIsChatbotOpen(false);
         setPopup({ message: "Questions imported to form!", type: "success", confirmAction: null, confirmInput: "" });
     };
@@ -425,6 +483,120 @@ function CreateQuiz() {
                                 </button>
                             </div>
                         )}
+                    </div>
+                    <div>
+                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Academic Year</label>
+                        <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
+                            <div className="relative w-full">
+                                <div
+                                    className="w-full border border-gray-300 p-2 rounded-md bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    onClick={() => setIsAcademicYearDropdownOpen(!isAcademicYearDropdownOpen)}
+                                >
+                                    {academicYear || "Select Academic Year"}
+                                </div>
+                                {isAcademicYearDropdownOpen && (
+                                    <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-40 overflow-auto shadow-md">
+                                        {academicYears.length > 0 ? (
+                                            academicYears.map((y, index) => (
+                                                <li
+                                                    key={index}
+                                                    className="flex items-center justify-between p-2 hover:bg-gray-100 text-xs sm:text-sm truncate"
+                                                >
+                                                    <span onClick={() => { setAcademicYear(y); setIsAcademicYearDropdownOpen(false); }}>{y}</span>
+                                                    {user.role === "admin" && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteAcademicYear(y); }}
+                                                            className="text-red-500 hover:text-red-700 text-base p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition"
+                                                            aria-label={`Remove ${y}`}
+                                                        >
+                                                            <i className="fas fa-trash"></i>
+                                                        </button>
+                                                    )}
+                                                </li>
+                                            ))
+                                        ) : (
+                                            <li className="p-2 text-gray-500 text-xs sm:text-sm">No academic years available</li>
+                                        )}
+                                    </ul>
+                                )}
+                            </div>
+                            {user.role === "admin" && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowNewAcademicYearInput(true)}
+                                    className="whitespace-nowrap px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs sm:text-sm"
+                                >
+                                    <i className="fas fa-plus mr-1"></i> Add Academic Year
+                                </button>
+                            )}
+                        </div>
+                        {showNewAcademicYearInput && user.role === "admin" && (
+                            <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 mt-2">
+                                <input
+                                    type="text"
+                                    value={newAcademicYearStart}
+                                    onChange={(e) => setNewAcademicYearStart(e.target.value)}
+                                    placeholder="YYYY"
+                                    maxLength={4}
+                                    className="w-full sm:w-24 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                />
+                                <span className="text-gray-700">-</span>
+                                <input
+                                    type="text"
+                                    value={newAcademicYearEnd}
+                                    onChange={(e) => setNewAcademicYearEnd(e.target.value)}
+                                    placeholder="YYYY"
+                                    maxLength={4}
+                                    className="w-full sm:w-24 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={addAcademicYear}
+                                    className="w-auto max-w-[100px] px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 text-xs sm:text-sm"
+                                    disabled={!newAcademicYearStart || !newAcademicYearEnd}
+                                >
+                                    Add
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Year</label>
+                        <select
+                            value={year}
+                            onChange={(e) => setYear(e.target.value)}
+                            className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                        >
+                            <option value="">Select Year</option>
+                            {["FY", "SY", "TY", "FOURTH"].map((y) => (
+                                <option key={y} value={y}>{y}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Branch</label>
+                        <input
+                            type="text"
+                            value={branch}
+                            onChange={(e) => setBranch(e.target.value.slice(0, 4))}
+                            placeholder="Branch (up to 4 characters)"
+                            maxLength={4}
+                            className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Division</label>
+                        <select
+                            value={division}
+                            onChange={(e) => setDivision(e.target.value)}
+                            className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                        >
+                            <option value="">Select Division</option>
+                            {["A", "B", "C", "D"].map((d) => (
+                                <option key={d} value={d}>{d}</option>
+                            ))}
+                        </select>
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Quiz Title</label>

@@ -1,17 +1,22 @@
+const mongoose = require("mongoose");
 const Quiz = require("../models/quiz");
 const Result = require("../models/result");
 const cloudinary = require("../configs/cloudinary");
-const User = require("../models/user"); // Import User model
+const User = require("../models/user");
 
 const createQuiz = async (req, res) => {
     try {
-        const { title, questions, timer, subject, isVisible = false } = req.body;
-        if (!title || !questions || questions.length === 0 || !timer || timer < 1 || !subject) {
-            return res.status(400).json({ msg: "Title, questions, valid timer, and subject are required" });
+        const { title, questions, timer, subject, isVisible = false, academicYear, year = "", branch = "", division = "" } = req.body;
+        if (!title || !questions || questions.length === 0 || !timer || timer < 1 || !subject || !academicYear) {
+            return res.status(400).json({ msg: "Title, questions, valid timer, subject, and academic year are required" });
+        }
+        // Validate academicYear format (e.g., "2025-2026")
+        if (!/^\d{4}-\d{4}$/.test(academicYear)) {
+            return res.status(400).json({ msg: "Academic year must be in format YYYY-YYYY (e.g., 2025-2026)" });
         }
         const createdBy = req.user.id;
 
-        const newQuiz = new Quiz({ subject, title, questions, createdBy, timer, isVisible });
+        const newQuiz = new Quiz({ subject, title, questions, createdBy, timer, isVisible, academicYear, year, branch, division });
         await newQuiz.save();
         res.status(201).json({ msg: "Quiz created successfully" });
     } catch (err) {
@@ -22,7 +27,17 @@ const createQuiz = async (req, res) => {
 
 const getAllQuizzes = async (req, res) => {
     try {
-        const filter = req.user.role === "admin" ? {} : { isVisible: true };
+        let filter = req.user.role === "admin" ? {} : { isVisible: true };
+        if (req.user.role === "user") {
+            const user = await User.findById(req.user.id);
+            if (!user) return res.status(404).json({ msg: "User not found" });
+            // Apply filters for users
+            filter.$and = [
+                { $or: [{ year: user.year }, { year: "" }] },
+                { $or: [{ branch: user.branch }, { branch: "" }] },
+                { $or: [{ division: user.division }, { division: "" }] },
+            ];
+        }
         const quizzes = await Quiz.find(filter)
             .select("-questions.answer")
             .populate("createdBy", "email");
@@ -51,6 +66,18 @@ const getQuiz = async (req, res) => {
         if (req.user.role !== "admin" && !quiz.isVisible) {
             return res.status(403).json({ msg: "Quiz is not visible" });
         }
+        if (req.user.role === "user") {
+            const user = await User.findById(req.user.id);
+            if (!user) return res.status(404).json({ msg: "User not found" });
+            const isAccessible = (
+                (quiz.year === "" || quiz.year === user.year) &&
+                (quiz.branch === "" || quiz.branch === user.branch) &&
+                (quiz.division === "" || quiz.division === user.division)
+            );
+            if (!isAccessible) {
+                return res.status(403).json({ msg: "You do not have access to this quiz" });
+            }
+        }
 
         const hasAttempted = req.user.role === "user"
             ? await Result.findOne({ student: req.user.id, quiz: req.params.quizId }) !== null
@@ -75,12 +102,14 @@ const updateQuiz = async (req, res) => {
         if (quiz.createdBy.toString() !== req.user.id) {
             return res.status(403).json({ msg: "You can only edit quizzes you created" });
         }
-        const { title, questions, timer, subject, isVisible } = req.body;
-        if (!title || !questions || questions.length === 0 || !timer || timer < 1 || !subject) {
-            return res.status(400).json({ msg: "Title, questions, valid timer, and subject are required" });
+        const { title, questions, timer, subject, isVisible, academicYear, year = "", branch = "", division = "" } = req.body;
+        if (!title || !questions || questions.length === 0 || !timer || timer < 1 || !subject || !academicYear) {
+            return res.status(400).json({ msg: "Title, questions, valid timer, subject, and academic year are required" });
+        }
+        if (!/^\d{4}-\d{4}$/.test(academicYear)) {
+            return res.status(400).json({ msg: "Academic year must be in format YYYY-YYYY (e.g., 2025-2026)" });
         }
 
-        // Collect existing image URLs to check for deletions
         const existingImages = [];
         quiz.questions.forEach((q) => {
             if (q.questionImage) existingImages.push(q.questionImage);
@@ -89,7 +118,6 @@ const updateQuiz = async (req, res) => {
             });
         });
 
-        // Collect new image URLs
         const newImages = [];
         questions.forEach((q) => {
             if (q.questionImage) newImages.push(q.questionImage);
@@ -98,21 +126,18 @@ const updateQuiz = async (req, res) => {
             });
         });
 
-        // Delete images that are no longer used
         const imagesToDelete = existingImages.filter((img) => !newImages.includes(img));
         for (const imageUrl of imagesToDelete) {
-            const publicId = imageUrl.split('/').pop().split('.')[0]; // Extract public ID from URL
+            const publicId = imageUrl.split('/').pop().split('.')[0];
             await cloudinary.uploader.destroy(`quiz_images/${publicId}`);
         }
 
-        // Update the quiz
         const updatedQuiz = await Quiz.findByIdAndUpdate(
             req.params.quizId,
-            { subject, title, questions, timer, isVisible },
+            { subject, title, questions, timer, isVisible, academicYear, year, branch, division },
             { new: true }
         );
 
-        // Recalculate scores for all existing results
         const results = await Result.find({ quiz: req.params.quizId });
         for (const result of results) {
             let score = 0;
@@ -140,7 +165,6 @@ const deleteQuiz = async (req, res) => {
             return res.status(403).json({ msg: "You can only delete quizzes you created" });
         }
 
-        // Delete all associated images from Cloudinary
         for (const question of quiz.questions) {
             if (question.questionImage) {
                 const publicId = question.questionImage.split('/').pop().split('.')[0];
@@ -190,15 +214,23 @@ const submitQuiz = async (req, res) => {
             return res.status(404).json({ msg: "Quiz not found" });
         }
 
-        const existingResult = await Result.findOne({ student: studentId, quiz: quizId });
-        if (existingResult) {
-            return res.status(403).json({ msg: "You have already attempted this quiz" });
-        }
-
-        // Fetch user to get rollNo, year, branch, and division
         const user = await User.findById(studentId);
         if (!user) {
             return res.status(404).json({ msg: "User not found" });
+        }
+
+        const isAccessible = (
+            (quiz.year === "" || quiz.year === user.year) &&
+            (quiz.branch === "" || quiz.branch === user.branch) &&
+            (quiz.division === "" || quiz.division === user.division)
+        );
+        if (!isAccessible) {
+            return res.status(403).json({ msg: "You do not have access to this quiz" });
+        }
+
+        const existingResult = await Result.findOne({ student: studentId, quiz: quizId });
+        if (existingResult) {
+            return res.status(403).json({ msg: "You have already attempted this quiz" });
         }
 
         let score = 0;
