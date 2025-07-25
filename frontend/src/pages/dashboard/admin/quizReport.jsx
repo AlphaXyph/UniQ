@@ -12,7 +12,8 @@ function QuizReport() {
     const [order, setOrder] = useState("asc");
     const [isLoading, setIsLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
-    const [showFilters, setShowFilters] = useState(false);
+    const [subjectTopicQuery, setSubjectTopicQuery] = useState("");
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [yearFilter, setYearFilter] = useState("");
     const [branchFilter, setBranchFilter] = useState("");
     const [divisionFilter, setDivisionFilter] = useState("");
@@ -64,6 +65,10 @@ function QuizReport() {
         setSearchQuery(e.target.value);
     };
 
+    const handleSubjectTopicSearchChange = (e) => {
+        setSubjectTopicQuery(e.target.value);
+    };
+
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
         if (name === "year") setYearFilter(value);
@@ -79,6 +84,8 @@ function QuizReport() {
         setDivisionFilter("");
         setFromDate("");
         setToDate("");
+        setSearchQuery("");
+        setSubjectTopicQuery("");
     };
 
     const closePopup = () => {
@@ -100,6 +107,21 @@ function QuizReport() {
                 String(entry.name || "").toLowerCase().includes(searchLower) ||
                 String(entry.rollNo || "").toLowerCase().includes(searchLower) ||
                 String(entry.email || "").toLowerCase().includes(searchLower);
+            const subjectTopicLower = subjectTopicQuery.toLowerCase();
+            const matchesSubjectTopic =
+                !subjectTopicQuery ||
+                (() => {
+                    const combined = `${quiz.subject} ${quiz.title}`.toLowerCase();
+                    if (combined.includes(subjectTopicLower)) return true;
+                    if (subjectTopicLower.includes(" - ")) {
+                        const [subjectPart, topicPart] = subjectTopicLower.split(" - ").map((s) => s.trim());
+                        return (
+                            String(quiz.subject || "").toLowerCase().includes(subjectPart) &&
+                            String(quiz.title || "").toLowerCase().includes(topicPart)
+                        );
+                    }
+                    return false;
+                })();
             const matchesYear = !yearFilter || entry.year === yearFilter;
             const matchesBranch = !branchFilter || String(entry.branch || "").toLowerCase().includes(branchFilter.toLowerCase());
             const matchesDivision = !divisionFilter || entry.division === divisionFilter;
@@ -109,7 +131,7 @@ function QuizReport() {
                 (entry.createdAt &&
                     new Date(entry.createdAt).toLocaleDateString("en-US") >= new Date(fromDate).toLocaleDateString("en-US") &&
                     new Date(entry.createdAt).toLocaleDateString("en-US") <= new Date(toDate).toLocaleDateString("en-US"));
-            return matchesSearch && matchesYear && matchesBranch && matchesDivision && matchesDate;
+            return matchesSearch && matchesSubjectTopic && matchesYear && matchesBranch && matchesDivision && matchesDate;
         });
 
         const sortedByDate = filtered.slice().sort((a, b) => {
@@ -157,7 +179,7 @@ function QuizReport() {
         });
 
         return grouped;
-    }, [report, sortBy, order, searchQuery, yearFilter, branchFilter, divisionFilter, fromDate, toDate]);
+    }, [report, sortBy, order, searchQuery, subjectTopicQuery, yearFilter, branchFilter, divisionFilter, fromDate, toDate, quiz.subject, quiz.title]);
 
     const sortedDates = useMemo(() => {
         return Object.keys(groupedResults).sort((a, b) => {
@@ -210,70 +232,93 @@ function QuizReport() {
         <div className="min-h-screen bg-gray-100 p-4 sm:p-6 md:p-8">
             <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-4 sm:p-6">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} />
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-4">
-                    <span className="flex items-center gap-1">
-                        <i className="fas fa-chart-bar text-xl sm:text-2xl"></i>
-                        Quiz Report:
-                    </span>
-                    <p className="text-blue-500 text-xl sm:text-2xl">{quiz.subject} - {quiz.title}</p>
-                </h2>
-
-
-                {/* SEARCH + FILTER SECTION */}
-                <div className="flex flex-row items-center gap-4 mb-4 flex-nowrap">
+                <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                        <span className="flex items-center gap-1">
+                            <i className="fas fa-chart-bar text-xl sm:text-2xl"></i>
+                            Quiz Report:
+                        </span>
+                        <p className="text-blue-500 text-xl sm:text-2xl">{quiz.subject} - {quiz.title}</p>
+                    </h2>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
                     <div className="flex-1">
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={handleSearchChange}
                             placeholder="Search by Name, Email, or Roll No"
-                            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                         />
                     </div>
-                    <div className="flex items-end">
+                    <div className="flex-1">
+                        <input
+                            type="text"
+                            value={subjectTopicQuery}
+                            onChange={handleSubjectTopicSearchChange}
+                            placeholder="Search by Subject - Topic"
+                            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                        />
+                    </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <div className="flex items-center gap-2 mb-1">
+                        <label className="block font-semibold text-xs sm:text-sm text-gray-700">
+                            Additional Filters
+                        </label>
                         <button
-                            onClick={() => setShowFilters(!showFilters)}
-                            className="px-4 py-3 flex items-center justify-center gap-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium transition duration-200 whitespace-nowrap"
+                            type="button"
+                            onClick={() => setIsFilterOpen(!isFilterOpen)}
+                            className="text-blue-500 hover:text-blue-700 text-base p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 transition"
+                            aria-label="Toggle filters"
                         >
                             <i className="fas fa-filter"></i>
                         </button>
                     </div>
+
+                    <button
+                        onClick={downloadCSV}
+                        className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
+                        disabled={isLoading || sortedDates.length === 0}
+                    >
+                        <i className="fas fa-download"></i> Download CSV
+                    </button>
                 </div>
-                {showFilters && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4 p-4 bg-gray-50 rounded-md">
+                {isFilterOpen && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 mb-4 p-2 sm:p-4 md:p-6">
                         <div>
-                            <label className="block mb-1 font-semibold text-sm text-gray-700">Year</label>
+                            <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Year</label>
                             <select
                                 name="year"
                                 value={yearFilter}
                                 onChange={handleFilterChange}
-                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                             >
                                 <option value="">All Years</option>
                                 <option value="FY">FY</option>
                                 <option value="SY">SY</option>
                                 <option value="TY">TY</option>
-                                <option value="FOURTH">FOURTH</option>
+                                <option value="4TH">4TH</option>
                             </select>
                         </div>
                         <div>
-                            <label className="block mb-1 font-semibold text-sm text-gray-700">Branch</label>
+                            <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Branch</label>
                             <input
                                 type="text"
                                 name="branch"
                                 value={branchFilter}
                                 onChange={handleFilterChange}
                                 placeholder="Enter Branch"
-                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                             />
                         </div>
                         <div>
-                            <label className="block mb-1 font-semibold text-sm text-gray-700">Division</label>
+                            <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Division</label>
                             <select
                                 name="division"
                                 value={divisionFilter}
                                 onChange={handleFilterChange}
-                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                             >
                                 <option value="">All Divisions</option>
                                 <option value="A">A</option>
@@ -283,69 +328,61 @@ function QuizReport() {
                             </select>
                         </div>
                         <div>
-                            <label className="block mb-1 font-semibold text-sm text-gray-700">From Date</label>
+                            <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">From Date</label>
                             <input
                                 type="date"
                                 name="fromDate"
                                 value={fromDate}
                                 onChange={handleFilterChange}
-                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                             />
                         </div>
                         <div>
-                            <label className="block mb-1 font-semibold text-sm text-gray-700">To Date</label>
+                            <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">To Date</label>
                             <input
                                 type="date"
                                 name="toDate"
                                 value={toDate}
                                 onChange={handleFilterChange}
-                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                             />
                         </div>
-                        <div className="flex items-end gap-2">
-                            <div className="flex-1">
-                                <label className="block mb-1 font-semibold text-sm text-gray-700">Sort By</label>
+                        <div>
+                            <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Sort By</label>
+                            <div className="flex items-center gap-2">
                                 <select
                                     value={sortBy}
                                     onChange={(e) => handleSortChange(e.target.value)}
-                                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                                 >
                                     <option value="name">Name</option>
                                     <option value="rollNo">Roll No</option>
                                     <option value="score">Score</option>
                                 </select>
+                                <button
+                                    onClick={toggleOrder}
+                                    className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 transition duration-200"
+                                >
+                                    <i className={`fas fa-arrow-${order === "asc" ? "up" : "down"} text-lg`}></i>
+                                </button>
                             </div>
-                            <button
-                                onClick={toggleOrder}
-                                className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 transition duration-200"
-                            >
-                                <i className={`fas fa-arrow-${order === "asc" ? "up" : "down"} text-lg`}></i>
-                            </button>
                         </div>
-                        <div className="col-span-full flex justify-end">
+                        <div className="sm:col-span-3 flex justify-end">
                             <button
                                 onClick={clearFilters}
-                                className="px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm transition"
+                                className="px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-xs sm:text-sm"
                             >
-                                <i className="fas fa-times"></i> Clear Filters
+                                Reset Filters
                             </button>
                         </div>
                     </div>
                 )}
-                <div className="flex gap-4 mb-4">
-                    <button
-                        onClick={downloadCSV}
-                        className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
-                        disabled={isLoading || sortedDates.length === 0}
-                    >
-                        <i className="fas fa-download"></i> Download CSV
-                    </button>
-                </div>
+
                 {isLoading ? (
                     <p className="text-gray-500 text-sm">Loading results...</p>
                 ) : sortedDates.length === 0 ? (
                     <p className="text-gray-500 text-sm">
-                        {searchQuery || yearFilter || branchFilter || divisionFilter || fromDate || toDate
+                        {searchQuery || subjectTopicQuery || yearFilter || branchFilter || divisionFilter || fromDate || toDate
                             ? "No results match your search or filters."
                             : "No results available for this quiz."}
                     </p>

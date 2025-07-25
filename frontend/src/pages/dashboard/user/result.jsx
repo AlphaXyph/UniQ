@@ -87,7 +87,19 @@ function Result() {
         const filtered = results.filter(
             (r) =>
                 !subjectTopicQuery ||
-                String(`${r.quiz?.subject || ""} - ${r.quiz?.title || ""}`.toLowerCase()).includes(subjectTopicQuery.toLowerCase())
+                (() => {
+                    const subjectTopicLower = subjectTopicQuery.toLowerCase();
+                    const combined = `${r.quiz?.subject || ""} ${r.quiz?.title || ""}`.toLowerCase();
+                    if (combined.includes(subjectTopicLower)) return true;
+                    if (subjectTopicLower.includes(" - ")) {
+                        const [subjectPart, topicPart] = subjectTopicLower.split(" - ").map((s) => s.trim());
+                        return (
+                            String(r.quiz?.subject || "").toLowerCase().includes(subjectPart) &&
+                            String(r.quiz?.title || "").toLowerCase().includes(topicPart)
+                        );
+                    }
+                    return false;
+                })()
         );
         if (filtered.length > 0) acc[date] = filtered;
         return acc;

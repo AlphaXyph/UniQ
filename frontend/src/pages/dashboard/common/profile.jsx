@@ -124,7 +124,7 @@ function Profile() {
 
     const validateYear = (year) => {
         if (!year) return "Year is required";
-        if (!["FY", "SY", "TY", "FOURTH"].includes(year)) return "Invalid year";
+        if (!["FY", "SY", "TY", "4TH"].includes(year)) return "Invalid year";
         return "";
     };
 
@@ -393,7 +393,7 @@ function Profile() {
                                     <option value="FY">FY</option>
                                     <option value="SY">SY</option>
                                     <option value="TY">TY</option>
-                                    <option value="FOURTH">FOURTH</option>
+                                    <option value="4TH">4TH</option>
                                 </select>
                             </div>
                         </>

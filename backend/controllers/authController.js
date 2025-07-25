@@ -68,8 +68,8 @@ async function register(req, res) {
             if (!rollNo || isNaN(rollNo) || rollNo < 1 || rollNo > 999) {
                 return res.status(400).json({ msg: "Roll No is required and must be a number between 1 and 999" });
             }
-            if (!["FY", "SY", "TY", "FOURTH"].includes(year)) {
-                return res.status(400).json({ msg: "Year must be one of FY, SY, TY, or FOURTH" });
+            if (!["FY", "SY", "TY", "4TH"].includes(year)) {
+                return res.status(400).json({ msg: "Year must be one of FY, SY, TY, or 4TH" });
             }
         }
 

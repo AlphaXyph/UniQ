@@ -107,7 +107,7 @@ function Register() {
 
     const validateYear = (year) => {
         if (!year) return "Year is required";
-        if (!["FY", "SY", "TY", "FOURTH"].includes(year)) return "Invalid year";
+        if (!["FY", "SY", "TY", "4TH"].includes(year)) return "Invalid year";
         return "";
     };
 
@@ -344,7 +344,7 @@ function Register() {
                             <option value="FY">FY</option>
                             <option value="SY">SY</option>
                             <option value="TY">TY</option>
-                            <option value="FOURTH">FOURTH</option>
+                            <option value="4TH">4TH</option>
                         </select>
                         {errors.year && <p className="text-red-500 text-xs mt-1">{errors.year}</p>}
                     </div>

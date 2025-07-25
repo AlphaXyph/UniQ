@@ -22,6 +22,7 @@ function CreateQuiz() {
     const [year, setYear] = useState("");
     const [branch, setBranch] = useState("");
     const [division, setDivision] = useState("");
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success", confirmAction: null, confirmInput: "" });
     const [isChatbotOpen, setIsChatbotOpen] = useState(false);
     const [showSpeechBubble, setShowSpeechBubble] = useState(true);
@@ -278,8 +279,8 @@ function CreateQuiz() {
             setPopup({ message: "Title cannot be empty", type: "error", confirmAction: null, confirmInput: "" });
             return;
         }
-        if (timer < 1) {
-            setPopup({ message: "Timer must be at least 1 minute", type: "error", confirmAction: null, confirmInput: "" });
+        if (timer < 1 || timer > 720) {
+            setPopup({ message: "Timer must be between 1 and 720 minutes", type: "error", confirmAction: null, confirmInput: "" });
             return;
         }
         if (academicYear.trim() === "") {
@@ -418,78 +419,11 @@ function CreateQuiz() {
                         <i className="fas fa-plus text-base sm:text-lg"></i> Create Quiz
                     </h2>
                     <div>
-                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Subject</label>
-                        <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                            <div className="relative w-full">
-                                <div
-                                    className="w-full border border-gray-300 p-2 rounded-md bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                >
-                                    {subject || "Select Subject"}
-                                </div>
-                                {isDropdownOpen && (
-                                    <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-40 overflow-auto shadow-md">
-                                        {subjects.length > 0 ? (
-                                            subjects.map((s, index) => (
-                                                <li
-                                                    key={index}
-                                                    className="flex items-center justify-between p-2 hover:bg-gray-100 text-xs sm:text-sm truncate"
-                                                >
-                                                    <span onClick={() => { setSubject(s); setIsDropdownOpen(false); }}>{s}</span>
-                                                    {user.role === "admin" && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={(e) => { e.stopPropagation(); handleDeleteSubject(s); }}
-                                                            className="text-red-500 hover:text-red-700 text-base p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition"
-                                                            aria-label={`Remove ${s}`}
-                                                        >
-                                                            <i className="fas fa-trash"></i>
-                                                        </button>
-                                                    )}
-                                                </li>
-                                            ))
-                                        ) : (
-                                            <li className="p-2 text-gray-500 text-xs sm:text-sm">No subjects available</li>
-                                        )}
-                                    </ul>
-                                )}
-                            </div>
-                            {user.role === "admin" && (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowNewSubjectInput(true)}
-                                    className="whitespace-nowrap px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs sm:text-sm"
-                                >
-                                    <i className="fas fa-plus"></i>
-                                </button>
-                            )}
-                        </div>
-                        {showNewSubjectInput && user.role === "admin" && (
-                            <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 mt-2">
-                                <input
-                                    type="text"
-                                    value={newSubjectName}
-                                    onChange={(e) => setNewSubjectName(e.target.value)}
-                                    placeholder="New Subject Name"
-                                    className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={addSubject}
-                                    className="w-auto max-w-[100px] px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 text-xs sm:text-sm"
-                                    disabled={!newSubjectName}
-                                >
-                                    Add
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                    <div>
                         <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Academic Year</label>
-                        <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                            <div className="relative w-full">
+                        <div className="flex flex-row items-center gap-1 flex-nowrap">
+                            <div className="relative flex-grow">
                                 <div
-                                    className="w-full border border-gray-300 p-2 rounded-md bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    className="w-full border border-gray-300 p-2 rounded-md bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm truncate"
                                     onClick={() => setIsAcademicYearDropdownOpen(!isAcademicYearDropdownOpen)}
                                 >
                                     {academicYear || "Select Academic Year"}
@@ -507,7 +441,7 @@ function CreateQuiz() {
                                                         <button
                                                             type="button"
                                                             onClick={(e) => { e.stopPropagation(); handleDeleteAcademicYear(y); }}
-                                                            className="text-red-500 hover:text-red-700 text-base p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition"
+                                                            className="text-red-500 hover:text-red-700 text-xs p-1 rounded-full hover:bg-gray-100 transition"
                                                             aria-label={`Remove ${y}`}
                                                         >
                                                             <i className="fas fa-trash"></i>
@@ -525,21 +459,21 @@ function CreateQuiz() {
                                 <button
                                     type="button"
                                     onClick={() => setShowNewAcademicYearInput(true)}
-                                    className="whitespace-nowrap px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs sm:text-sm"
+                                    className="px-2 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs"
                                 >
                                     <i className="fas fa-plus"></i>
                                 </button>
                             )}
                         </div>
                         {showNewAcademicYearInput && user.role === "admin" && (
-                            <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 mt-2">
+                            <div className="flex flex-row items-center gap-1 flex-nowrap mt-2">
                                 <input
                                     type="text"
                                     value={newAcademicYearStart}
                                     onChange={(e) => setNewAcademicYearStart(e.target.value)}
                                     placeholder="YYYY"
                                     maxLength={4}
-                                    className="w-full sm:w-24 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    className="w-20 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
                                 />
                                 <span className="text-gray-700">-</span>
                                 <input
@@ -548,12 +482,12 @@ function CreateQuiz() {
                                     onChange={(e) => setNewAcademicYearEnd(e.target.value)}
                                     placeholder="YYYY"
                                     maxLength={4}
-                                    className="w-full sm:w-24 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    className="w-20 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
                                 />
                                 <button
                                     type="button"
                                     onClick={addAcademicYear}
-                                    className="w-auto max-w-[100px] px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 text-xs sm:text-sm"
+                                    className="px-2 py-1.5 bg-green-500 text-white rounded-md hover:bg-green-600 text-xs"
                                     disabled={!newAcademicYearStart || !newAcademicYearEnd}
                                 >
                                     Add
@@ -562,61 +496,150 @@ function CreateQuiz() {
                         )}
                     </div>
                     <div>
-                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Year</label>
-                        <select
-                            value={year}
-                            onChange={(e) => setYear(e.target.value)}
-                            className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                        >
-                            <option value="">Select Year</option>
-                            {["FY", "SY", "TY", "FOURTH"].map((y) => (
-                                <option key={y} value={y}>{y}</option>
-                            ))}
-                        </select>
+                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Subject</label>
+                        <div className="flex flex-row items-center gap-1 flex-nowrap">
+                            <div className="relative flex-grow">
+                                <div
+                                    className="w-full border border-gray-300 p-2 rounded-md bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm truncate"
+                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                >
+                                    {subject || "Select Subject"}
+                                </div>
+                                {isDropdownOpen && (
+                                    <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-40 overflow-auto shadow-md">
+                                        {subjects.length > 0 ? (
+                                            subjects.map((s, index) => (
+                                                <li
+                                                    key={index}
+                                                    className="flex items-center justify-between p-2 hover:bg-gray-100 text-xs sm:text-sm truncate"
+                                                >
+                                                    <span onClick={() => { setSubject(s); setIsDropdownOpen(false); }}>{s}</span>
+                                                    {user.role === "admin" && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteSubject(s); }}
+                                                            className="text-red-500 hover:text-red-700 text-xs p-1 rounded-full hover:bg-gray-100 transition"
+                                                            aria-label={`Remove ${s}`}
+                                                        >
+                                                            <i className="fas fa-trash"></i>
+                                                        </button>
+                                                    )}
+                                                </li>
+                                            ))
+                                        ) : (
+                                            <li className="p-2 text-gray-500 text-xs sm:text-sm">No subjects available</li>
+                                        )}
+                                    </ul>
+                                )}
+                            </div>
+                            {user.role === "admin" && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowNewSubjectInput(true)}
+                                    className="px-2 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs"
+                                >
+                                    <i className="fas fa-plus"></i>
+                                </button>
+                            )}
+                        </div>
+                        {showNewSubjectInput && user.role === "admin" && (
+                            <div className="flex flex-row items-center gap-1 flex-nowrap mt-2">
+                                <input
+                                    type="text"
+                                    value={newSubjectName}
+                                    onChange={(e) => setNewSubjectName(e.target.value.slice(0, 20))}
+                                    placeholder="New Subject Name"
+                                    className="flex-grow border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                                    maxLength={20}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={addSubject}
+                                    className="px-2 py-1.5 bg-green-500 text-white rounded-md hover:bg-green-600 text-xs"
+                                    disabled={!newSubjectName}
+                                >
+                                    Add
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+                        <div className="sm:col-span-2">
+                            <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Quiz Title</label>
+                            <input
+                                type="text"
+                                placeholder="Quiz Title"
+                                className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value.slice(0, 40))}
+                                maxLength={40}
+                            />
+                        </div>
+                        <div className="sm:col-span-1">
+                            <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Quiz Timer (minutes)</label>
+                            <input
+                                type="number"
+                                className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                value={timer}
+                                onChange={(e) => setTimer(Number(e.target.value))}
+                                min={1}
+                                max={720}
+                            />
+                        </div>
                     </div>
                     <div>
-                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Branch</label>
-                        <input
-                            type="text"
-                            value={branch}
-                            onChange={(e) => setBranch(e.target.value.slice(0, 4))}
-                            placeholder="Branch (up to 4 characters)"
-                            maxLength={4}
-                            className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Division</label>
-                        <select
-                            value={division}
-                            onChange={(e) => setDivision(e.target.value)}
-                            className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                        >
-                            <option value="">Select Division</option>
-                            {["A", "B", "C", "D"].map((d) => (
-                                <option key={d} value={d}>{d}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Quiz Title</label>
-                        <input
-                            type="text"
-                            placeholder="Quiz Title"
-                            className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Quiz Timer (minutes)</label>
-                        <input
-                            type="number"
-                            className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                            value={timer}
-                            onChange={(e) => setTimer(Number(e.target.value))}
-                            min={1}
-                        />
+                        <div className="flex items-center gap-2 mb-1">
+                            <label className="block font-semibold text-xs sm:text-sm text-gray-700">Additional Filters</label>
+                            <button
+                                type="button"
+                                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                className=" text-blue-500 hover:text-blue-700 text-base p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 transition"
+                                aria-label="Toggle filters"
+                            >
+                                <i className="fas fa-filter"></i>
+                            </button>
+                        </div>
+                        {isFilterOpen && (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+                                <div>
+                                    <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Year</label>
+                                    <select
+                                        value={year}
+                                        onChange={(e) => setYear(e.target.value)}
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    >
+                                        <option value="">Select Year</option>
+                                        {["FY", "SY", "TY", "4TH"].map((y) => (
+                                            <option key={y} value={y}>{y}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Branch</label>
+                                    <input
+                                        type="text"
+                                        value={branch}
+                                        onChange={(e) => setBranch(e.target.value.slice(0, 4))}
+                                        placeholder="Branch"
+                                        maxLength={4}
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Division</label>
+                                    <select
+                                        value={division}
+                                        onChange={(e) => setDivision(e.target.value)}
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    >
+                                        <option value="">Select Division</option>
+                                        {["A", "B", "C", "D"].map((d) => (
+                                            <option key={d} value={d}>{d}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Upload Questions (CSV)</label>

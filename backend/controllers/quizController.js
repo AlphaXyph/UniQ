@@ -7,10 +7,18 @@ const User = require("../models/user");
 const createQuiz = async (req, res) => {
     try {
         const { title, questions, timer, subject, isVisible = false, academicYear, year = "", branch = "", division = "" } = req.body;
-        if (!title || !questions || questions.length === 0 || !timer || timer < 1 || !subject || !academicYear) {
-            return res.status(400).json({ msg: "Title, questions, valid timer, subject, and academic year are required" });
+        if (!title || !questions || questions.length === 0 || !timer || !subject || !academicYear) {
+            return res.status(400).json({ msg: "Title, questions, timer, subject, and academic year are required" });
         }
-        // Validate academicYear format (e.g., "2025-2026")
+        if (subject.length > 20) {
+            return res.status(400).json({ msg: "Subject must not exceed 20 characters" });
+        }
+        if (title.length > 40) {
+            return res.status(400).json({ msg: "Title must not exceed 40 characters" });
+        }
+        if (timer < 1 || timer > 720) {
+            return res.status(400).json({ msg: "Timer must be between 1 and 720 minutes" });
+        }
         if (!/^\d{4}-\d{4}$/.test(academicYear)) {
             return res.status(400).json({ msg: "Academic year must be in format YYYY-YYYY (e.g., 2025-2026)" });
         }
@@ -103,8 +111,17 @@ const updateQuiz = async (req, res) => {
             return res.status(403).json({ msg: "You can only edit quizzes you created" });
         }
         const { title, questions, timer, subject, isVisible, academicYear, year = "", branch = "", division = "" } = req.body;
-        if (!title || !questions || questions.length === 0 || !timer || timer < 1 || !subject || !academicYear) {
-            return res.status(400).json({ msg: "Title, questions, valid timer, subject, and academic year are required" });
+        if (!title || !questions || questions.length === 0 || !timer || !subject || !academicYear) {
+            return res.status(400).json({ msg: "Title, questions, timer, subject, and academic year are required" });
+        }
+        if (subject.length > 20) {
+            return res.status(400).json({ msg: "Subject must not exceed 20 characters" });
+        }
+        if (title.length > 40) {
+            return res.status(400).json({ msg: "Title must not exceed 40 characters" });
+        }
+        if (timer < 1 || timer > 720) {
+            return res.status(400).json({ msg: "Timer must be between 1 and 720 minutes" });
         }
         if (!/^\d{4}-\d{4}$/.test(academicYear)) {
             return res.status(400).json({ msg: "Academic year must be in format YYYY-YYYY (e.g., 2025-2026)" });

@@ -68,8 +68,8 @@ const userSchema = new mongoose.Schema({
     year: {
         type: String,
         enum: {
-            values: ["FY", "SY", "TY", "FOURTH"],
-            message: "Year must be one of FY, SY, TY, or FOURTH",
+            values: ["FY", "SY", "TY", "4TH"],
+            message: "Year must be one of FY, SY, TY, or 4TH",
         },
         required: function () {
             return this.role === "user";

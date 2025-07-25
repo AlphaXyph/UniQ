@@ -10,10 +10,24 @@ function Home() {
     const [confirmInput, setConfirmInput] = useState("");
     const [isVisibleQuizzesOpen, setIsVisibleQuizzesOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [filterAcademicYear, setFilterAcademicYear] = useState("");
+    const [filterPostedBy, setFilterPostedBy] = useState("");
+    const [filterSubjectTitle, setFilterSubjectTitle] = useState("");
+    const [filterYear, setFilterYear] = useState("");
+    const [filterBranch, setFilterBranch] = useState("");
+    const [filterDivision, setFilterDivision] = useState("");
+    const [filterFromDate, setFilterFromDate] = useState("");
+    const [filterToDate, setFilterToDate] = useState("");
     const user = JSON.parse(localStorage.getItem("user")) || {};
     const role = user?.role;
     const userEmail = user?.email;
     const navigate = useNavigate();
+
+    const academicYears = useMemo(() => {
+        const years = [...new Set(quizzes.map((q) => q.academicYear).filter((y) => y))];
+        return years.sort();
+    }, [quizzes]);
 
     const fetchQuizzes = useCallback(async () => {
         setIsLoading(true);
@@ -38,8 +52,42 @@ function Home() {
         fetchQuizzes();
     }, [fetchQuizzes]);
 
+    const filteredQuizzes = useMemo(() => {
+        return quizzes.filter((q) => {
+            const matchesAcademicYear = filterAcademicYear ? q.academicYear === filterAcademicYear : true;
+            const matchesPostedBy = filterPostedBy
+                ? q.createdBy?.email?.toLowerCase().includes(filterPostedBy.toLowerCase())
+                : true;
+            const matchesSubjectTitle = filterSubjectTitle
+                ? (() => {
+                    const searchTerm = filterSubjectTitle.toLowerCase();
+                    const combined = `${q.subject} ${q.title}`.toLowerCase();
+                    if (combined.includes(searchTerm)) return true;
+                    if (searchTerm.includes(" - ")) {
+                        const [subjectPart, titlePart] = searchTerm.split(" - ").map((s) => s.trim());
+                        return (
+                            q.subject.toLowerCase().includes(subjectPart) &&
+                            q.title.toLowerCase().includes(titlePart)
+                        );
+                    }
+                    return false;
+                })()
+                : true;
+            const matchesYear = filterYear ? q.year === filterYear : true;
+            const matchesBranch = filterBranch ? q.branch === filterBranch : true;
+            const matchesDivision = filterDivision ? q.division === filterDivision : true;
+            const matchesDate =
+                !filterFromDate ||
+                !filterToDate ||
+                (q.createdAt &&
+                    new Date(q.createdAt).toLocaleDateString("en-US") >= new Date(filterFromDate).toLocaleDateString("en-US") &&
+                    new Date(q.createdAt).toLocaleDateString("en-US") <= new Date(filterToDate).toLocaleDateString("en-US"));
+            return matchesAcademicYear && matchesPostedBy && matchesSubjectTitle && matchesYear && matchesBranch && matchesDivision && matchesDate;
+        });
+    }, [quizzes, filterAcademicYear, filterPostedBy, filterSubjectTitle, filterYear, filterBranch, filterDivision, filterFromDate, filterToDate]);
+
     const groupedQuizzes = useMemo(() => {
-        const grouped = quizzes
+        const grouped = filteredQuizzes
             .slice()
             .sort((a, b) => {
                 const dateA = a.createdAt && !isNaN(new Date(a.createdAt).getTime()) ? new Date(a.createdAt) : new Date(0);
@@ -66,11 +114,11 @@ function Home() {
         });
 
         return { grouped, sortedDates };
-    }, [quizzes]);
+    }, [filteredQuizzes]);
 
     const visibleQuizzes = useMemo(() => {
-        return quizzes.filter((q) => q.isVisible);
-    }, [quizzes]);
+        return filteredQuizzes.filter((q) => q.isVisible);
+    }, [filteredQuizzes]);
 
     const handleEdit = (quizId) => {
         navigate(`/dashboard/edit/${quizId}`);
@@ -126,18 +174,28 @@ function Home() {
         setIsVisibleQuizzesOpen(!isVisibleQuizzesOpen);
     };
 
+    const resetFilters = () => {
+        setFilterAcademicYear("");
+        setFilterPostedBy("");
+        setFilterSubjectTitle("");
+        setFilterYear("");
+        setFilterBranch("");
+        setFilterDivision("");
+        setFilterFromDate("");
+        setFilterToDate("");
+    };
+
     return (
-        <div className="min-h-screen bg-gray-100 p-2 sm:p-4 md:p-5">
+        <div className="min-h-screen bg-gray-100 p-2 sm:p-4 md:p-2xl">
             <Popup
                 message={deleteConfirm.show ? "Are you sure you want to delete this quiz?" : popup.message}
-                type={deleteConfirm.show ? "warning" : popup.type}
-                onClose={closePopup}
-                confirmAction={deleteConfirm.show ? handleDelete : null}
-                confirmInput={confirmInput}
-                setConfirmInput={setConfirmInput}
+                type={deleteConfirm.show ? "Confirm" : popup.type || "success"}
+                onClick={deleteConfirm.show ? handleDelete : closePopup}
+                confirmInput={deleteConfirm.show ? confirmInput : undefined}
+                setConfirmInput={deleteConfirm.show ? setConfirmInput : undefined}
             />
             {isLoading ? (
-                <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-2 sm:p-4 md:p-5 flex items-center justify-center">
+                <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-2 sm:p-4 md:p-6 flex items-center justify-center">
                     <div className="flex flex-col items-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
                         <span className="mt-2 text-sm text-gray-600">Loading quizzes...</span>
@@ -146,7 +204,7 @@ function Home() {
             ) : (
                 <>
                     {role === "admin" && (
-                        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-2 sm:p-4 md:p-5 mb-4">
+                        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-2 sm:p-4 md:p-6 mb-4">
                             <button
                                 onClick={toggleVisibleQuizzes}
                                 className="w-full text-left text-base sm:text-lg font-bold text-gray-800 mb-2 sm:mb-3 flex items-center gap-2 focus:outline-none"
@@ -190,7 +248,7 @@ function Home() {
                                                                 Academic Year: {q.academicYear || "Not set"} | Year: {q.year || "All"} | Branch: {q.branch || "All"} | Division: {q.division || "All"}
                                                             </p>
                                                             <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                                                                Questions: {q.questions?.length || 0} | Time: {q.timer} min | Status: <span className="text-green-500">●</span>
+                                                                Questions: {q.questions?.length || 0} | Time: {q.timer} min | Status: <span className="text-green-500">✦</span>
                                                             </p>
                                                             <div className="flex gap-2 mt-1">
                                                                 <Link
@@ -244,10 +302,126 @@ function Home() {
                             )}
                         </div>
                     )}
-                    <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-2 sm:p-4 md:p-5">
-                        <h1 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
-                            <i className="fa-solid fa-list text-base sm:text-lg"></i> All Quizzes
-                        </h1>
+                    <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-2 sm:p-4 md:p-6">
+                        <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                            <h1 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
+                                <i className="fa-solid fa-list text-base sm:text-lg"></i> All Quizzes
+                            </h1>
+                        </div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <label className="block font-semibold text-xs sm:text-sm text-gray-700">Additional Filters</label>
+                            <button
+                                type="button"
+                                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                className=" text-blue-500 hover:text-blue-700 text-base p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 transition"
+                                aria-label="Toggle filters"
+                            >
+                                <i className="fas fa-filter"></i>
+                            </button>
+                        </div>
+                        {isFilterOpen && (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 mb-4 p-2 sm:p-4 md:p-6">
+                                <div>
+                                    <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Subject - Topic</label>
+                                    <input
+                                        type="text"
+                                        value={filterSubjectTitle}
+                                        onChange={(e) => setFilterSubjectTitle(e.target.value)}
+                                        placeholder="Search subject or title"
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Academic Year</label>
+                                    <select
+                                        value={filterAcademicYear}
+                                        onChange={(e) => setFilterAcademicYear(e.target.value)}
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    >
+                                        <option value="">All</option>
+                                        {academicYears.map((year) => (
+                                            <option key={year} value={year}>
+                                                {year}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Posted by</label>
+                                    <input
+                                        type="text"
+                                        value={filterPostedBy}
+                                        onChange={(e) => setFilterPostedBy(e.target.value)}
+                                        placeholder="Search email"
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Year</label>
+                                    <select
+                                        value={filterYear}
+                                        onChange={(e) => setFilterYear(e.target.value)}
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    >
+                                        <option value="">All</option>
+                                        {["FY", "SY", "TY", "4TH"].map((y) => (
+                                            <option key={y} value={y}>{y}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Branch</label>
+                                    <input
+                                        type="text"
+                                        value={filterBranch}
+                                        onChange={(e) => setFilterBranch(e.target.value)}
+                                        placeholder="Branch"
+                                        maxLength={4}
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Division</label>
+                                    <select
+                                        value={filterDivision}
+                                        onChange={(e) => setFilterDivision(e.target.value)}
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    >
+                                        <option value="">All</option>
+                                        {["A", "B", "C", "D"].map((d) => (
+                                            <option key={d} value={d}>{d}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">From Date</label>
+                                    <input
+                                        type="date"
+                                        value={filterFromDate}
+                                        onChange={(e) => setFilterFromDate(e.target.value)}
+                                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">To Date</label>
+                                    <input
+                                        type="date"
+                                        value={filterToDate}
+                                        onChange={(e) => setFilterToDate(e.target.value)}
+                                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                    />
+                                </div>
+                                <div className="sm:col-span-3 flex justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={resetFilters}
+                                        className="px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-xs sm:text-sm"
+                                    >
+                                        Reset Filters
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         {groupedQuizzes.sortedDates.length === 0 ? (
                             <p className="text-xs sm:text-sm text-gray-500">No quizzes found.</p>
                         ) : (
@@ -277,7 +451,7 @@ function Home() {
                                                             <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
                                                                 Questions: {q.questions?.length || 0} | Time: {q.timer} min
                                                                 {role === "admin" && (
-                                                                    <span> | Status: <span className={q.isVisible ? "text-green-600" : "text-orange-500"}>{q.isVisible ? "●" : "●"}</span></span>
+                                                                    <span> | Status: <span className={q.isVisible ? "text-green-600" : "text-orange-500"}>{q.isVisible ? "✦" : "✦"}</span></span>
                                                                 )}
                                                             </p>
                                                             {role === "user" && q.isVisible && !q.hasAttempted ? (
