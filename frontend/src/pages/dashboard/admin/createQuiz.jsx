@@ -460,7 +460,7 @@ function CreateQuiz() {
                                     onClick={() => setShowNewSubjectInput(true)}
                                     className="whitespace-nowrap px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs sm:text-sm"
                                 >
-                                    <i className="fas fa-plus mr-1"></i> Add Subject
+                                    <i className="fas fa-plus"></i>
                                 </button>
                             )}
                         </div>
@@ -527,7 +527,7 @@ function CreateQuiz() {
                                     onClick={() => setShowNewAcademicYearInput(true)}
                                     className="whitespace-nowrap px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs sm:text-sm"
                                 >
-                                    <i className="fas fa-plus mr-1"></i> Add Academic Year
+                                    <i className="fas fa-plus"></i>
                                 </button>
                             )}
                         </div>

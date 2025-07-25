@@ -75,6 +75,9 @@ const userSchema = new mongoose.Schema({
             return this.role === "user";
         },
     },
+    lastProfileUpdate: {
+        type: Date
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);

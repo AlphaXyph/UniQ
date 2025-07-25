@@ -131,7 +131,13 @@ async function login(req, res) {
                 role: user.role,
                 name: user.name,
                 surname: user.surname,
-                ...(user.role === "user" && { branch: user.branch, division: user.division, rollNo: user.rollNo, year: user.year }),
+                ...(user.role === "user" && {
+                    branch: user.branch,
+                    division: user.division,
+                    rollNo: user.rollNo,
+                    year: user.year,
+                    lastProfileUpdate: user.lastProfileUpdate, // Include lastProfileUpdate
+                }),
             },
         });
     } catch (err) {
@@ -156,7 +162,13 @@ async function refreshToken(req, res) {
                 role: user.role,
                 name: user.name,
                 surname: user.surname,
-                ...(user.role === "user" && { branch: user.branch, division: user.division, rollNo: user.rollNo, year: user.year }),
+                ...(user.role === "user" && {
+                    branch: user.branch,
+                    division: user.division,
+                    rollNo: user.rollNo,
+                    year: user.year,
+                    lastProfileUpdate: user.lastProfileUpdate, // Include lastProfileUpdate
+                }),
             },
         });
     } catch (err) {
@@ -241,7 +253,19 @@ async function getProfile(req, res) {
     try {
         const user = await User.findById(req.user.id).select('-password');
         if (!user) return res.status(404).json({ msg: "User not found" });
-        res.json(user);
+        res.json({
+            email: user.email,
+            role: user.role,
+            name: user.name,
+            surname: user.surname,
+            ...(user.role === "user" && {
+                branch: user.branch,
+                division: user.division,
+                rollNo: user.rollNo,
+                year: user.year,
+                lastProfileUpdate: user.lastProfileUpdate, // Include lastProfileUpdate
+            }),
+        });
     } catch (err) {
         res.status(500).json({ msg: "Server error" });
     }
@@ -260,6 +284,16 @@ async function updateProfile(req, res) {
             return res.status(400).json({ msg: "Division must be one of A, B, C, or D" });
         }
 
+        // Check if 7 days have passed since last profile update
+        if (user.lastProfileUpdate) {
+            const now = new Date();
+            const lastUpdate = new Date(user.lastProfileUpdate);
+            const daysSinceLastUpdate = (now - lastUpdate) / (1000 * 60 * 60 * 24);
+            if (daysSinceLastUpdate < 7) {
+                return res.status(403).json({ msg: "You can only update your profile once every 7 days" });
+            }
+        }
+
         user.name = name || user.name;
         user.surname = surname || user.surname;
         if (user.role === "user") {
@@ -269,8 +303,9 @@ async function updateProfile(req, res) {
             user.year = year || user.year;
         }
 
+        user.lastProfileUpdate = new Date(); // Update timestamp
         await user.save();
-        res.json({ msg: "Profile updated successfully" });
+        res.json({ msg: "Profile updated successfully", lastProfileUpdate: user.lastProfileUpdate });
     } catch (err) {
         res.status(500).json({ msg: "Server error" });
     }
