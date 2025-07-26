@@ -1,8 +1,8 @@
-const mongoose = require("mongoose");
 const Quiz = require("../models/quiz");
 const Result = require("../models/result");
 const cloudinary = require("../configs/cloudinary");
 const User = require("../models/user");
+const QuizSession = require("../models/quizSession");
 
 const createQuiz = async (req, res) => {
     try {
@@ -39,7 +39,6 @@ const getAllQuizzes = async (req, res) => {
         if (req.user.role === "user") {
             const user = await User.findById(req.user.id);
             if (!user) return res.status(404).json({ msg: "User not found" });
-            // Apply filters for users
             filter.$and = [
                 { $or: [{ year: user.year }, { year: "" }] },
                 { $or: [{ branch: user.branch }, { branch: "" }] },
@@ -84,6 +83,14 @@ const getQuiz = async (req, res) => {
             );
             if (!isAccessible) {
                 return res.status(403).json({ msg: "You do not have access to this quiz" });
+            }
+            const session = await QuizSession.findOne({
+                user: req.user.id,
+                quiz: req.params.quizId,
+                isActive: true
+            });
+            if (session && session.shuffledIndices) {
+                quiz.questions = session.shuffledIndices.map(index => quiz.questions[index]);
             }
         }
 
@@ -221,68 +228,11 @@ const toggleQuizVisibility = async (req, res) => {
     }
 };
 
-const submitQuiz = async (req, res) => {
-    try {
-        const { quizId, answers } = req.body;
-        const studentId = req.user.id;
-
-        const quiz = await Quiz.findById(quizId);
-        if (!quiz) {
-            return res.status(404).json({ msg: "Quiz not found" });
-        }
-
-        const user = await User.findById(studentId);
-        if (!user) {
-            return res.status(404).json({ msg: "User not found" });
-        }
-
-        const isAccessible = (
-            (quiz.year === "" || quiz.year === user.year) &&
-            (quiz.branch === "" || quiz.branch === user.branch) &&
-            (quiz.division === "" || quiz.division === user.division)
-        );
-        if (!isAccessible) {
-            return res.status(403).json({ msg: "You do not have access to this quiz" });
-        }
-
-        const existingResult = await Result.findOne({ student: studentId, quiz: quizId });
-        if (existingResult) {
-            return res.status(403).json({ msg: "You have already attempted this quiz" });
-        }
-
-        let score = 0;
-        quiz.questions.forEach((q, idx) => {
-            if (q.answer === answers[idx]) score++;
-        });
-
-        const result = new Result({
-            student: studentId,
-            quiz: quizId,
-            answers,
-            score,
-            total: quiz.questions.length,
-            rollNo: user.rollNo,
-            year: user.year,
-            branch: user.branch,
-            division: user.division,
-            startedAt: new Date(),
-            submittedAt: new Date(),
-        });
-
-        await result.save();
-        res.json({ msg: "Quiz submitted successfully", score, total: quiz.questions.length });
-    } catch (err) {
-        console.error("Submit quiz error:", err.message, err.stack);
-        res.status(500).json({ msg: "Submit failed" });
-    }
-};
-
 module.exports = {
     createQuiz,
     getAllQuizzes,
     getQuiz,
     updateQuiz,
     deleteQuiz,
-    toggleQuizVisibility,
-    submitQuiz
+    toggleQuizVisibility
 };

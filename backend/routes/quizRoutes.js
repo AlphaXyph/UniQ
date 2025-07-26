@@ -8,8 +8,7 @@ const {
     getQuiz,
     updateQuiz,
     deleteQuiz,
-    toggleQuizVisibility,
-    submitQuiz,
+    toggleQuizVisibility
 } = require("../controllers/quizController");
 
 router.post("/create", authMiddleware, createQuiz);
@@ -18,7 +17,7 @@ router.get("/:quizId", authMiddleware, getQuiz);
 router.post("/update/:quizId", authMiddleware, updateQuiz);
 router.delete("/:quizId", authMiddleware, deleteQuiz);
 router.post("/toggle-visibility/:quizId", authMiddleware, toggleQuizVisibility);
-router.post("/submit", authMiddleware, submitQuiz);
 router.post("/upload-image", authMiddleware, upload.single("image"), uploadImage);
+
 
 module.exports = router;

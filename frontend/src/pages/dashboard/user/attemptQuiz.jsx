@@ -7,7 +7,6 @@ import { jwtDecode } from "jwt-decode";
 function AttemptQuiz({ setIsQuizActive }) {
     const { quizId } = useParams();
     const [quiz, setQuiz] = useState(null);
-    const [originalIndices, setOriginalIndices] = useState([]);
     const [answers, setAnswers] = useState([]);
     const [popup, setPopup] = useState({ message: "", type: "success" });
     const [isStarted, setIsStarted] = useState(false);
@@ -22,7 +21,7 @@ function AttemptQuiz({ setIsQuizActive }) {
     const user = JSON.parse(localStorage.getItem("user"));
     const role = user?.role || "user";
     const MAX_VIOLATIONS = 5;
-    const [sessionId] = useState(`${quizId}-${Date.now()}`);
+    const [sessionId, setSessionId] = useState(null);
     const lastViolationTime = useRef(0);
     const lastPopStateTime = useRef(0);
     const THROTTLE_MS = 500;
@@ -36,17 +35,6 @@ function AttemptQuiz({ setIsQuizActive }) {
     const focusLossTimeoutRef = useRef(null);
     const lastFocusLossTime = useRef(0);
 
-    const shuffleArray = (array) => {
-        const shuffled = [...array];
-        const indices = array.map((_, index) => index);
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-            [indices[i], indices[j]] = [indices[j], indices[i]];
-        }
-        return { shuffled, indices };
-    };
-
     const checkBrowserSupport = useCallback(() => {
         const ua = navigator.userAgent.toLowerCase();
         const isMobile = /mobile|android|iphone|ipad|ipod|tablet/.test(ua);
@@ -59,7 +47,8 @@ function AttemptQuiz({ setIsQuizActive }) {
             document.webkitFullscreenEnabled ||
             document.mozFullScreenEnabled ||
             document.msFullscreenEnabled ||
-            (isMobile && (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen));
+            (isMobile && (document.documentElement.requestFullscreen ||
+                document.documentElement.webkitRequestFullscreen));
         const isWebRTCSupported = !!window.RTCPeerConnection;
         const isWebGLSupported = !!window.WebGLRenderingContext;
         const isNavigatorValid = navigator.userAgent !== "" && (navigator.vendor !== "" || isSafari);
@@ -110,7 +99,7 @@ function AttemptQuiz({ setIsQuizActive }) {
         }
 
         if (!isFullscreen()) {
-            setPopup({ message: "Please click 'Enter Fullscreen' to start the quiz.", type: "error" });
+            setPopup({ message: "Please click 'Fullscreen' to start the quiz.", type: "error" });
             setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
             setChecksPassed(false);
             return false;
@@ -135,7 +124,7 @@ function AttemptQuiz({ setIsQuizActive }) {
             } else {
                 setIsBrowserSupported(false);
                 setChecksPassed(false);
-                setPopup({ message: "Fullscreen mode is not supported. Please use the latest version of Chrome, Firefox, Edge, or Safari.", type: "error" });
+                setPopup({ message: "Fullscreen mode not supported. Please use the latest version of Chrome, Firefox, Edge, or Safari.", type: "error" });
                 setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
             }
         } catch (err) {
@@ -144,7 +133,7 @@ function AttemptQuiz({ setIsQuizActive }) {
             if (err.name === "NotAllowedError") {
                 message = "Fullscreen permission denied. Please allow fullscreen for this site in browser settings and click 'Enter Fullscreen' again.";
             } else if (err.name === "NotSupportedError") {
-                message = "Fullscreen mode is not supported on this browser or device. Please use Chrome, Firefox, Edge, or Safari.";
+                message = "Fullscreen mode is not supported on this browser or device. Please use Chrome, Firefox, or Safari.";
             } else if (err.message.includes("Illegal invocation")) {
                 message = "Fullscreen request failed due to a browser issue. Please ensure you're using the latest version of your browser and try again.";
             }
@@ -159,7 +148,7 @@ function AttemptQuiz({ setIsQuizActive }) {
 
     const refreshToken = useCallback(async () => {
         try {
-            const token = localStorage.getItem("token");
+            const token = await localStorage.getItem("token");
             if (!token) {
                 setPopup({ message: "Session expired. Please log in again.", type: "error" });
                 setTimeout(() => navigate("/login"), 3000);
@@ -172,7 +161,7 @@ function AttemptQuiz({ setIsQuizActive }) {
 
             if (timeUntilExpiry < 15 * 60) {
                 const res = await API.post("/auth/refresh-token", {}, {
-                    headers: { Authorization: `Bearer ${token}` },
+                    headers: { Authorization: `Bearer ${token}` }
                 });
                 const newToken = res.data.token;
                 localStorage.setItem("token", newToken);
@@ -187,41 +176,46 @@ function AttemptQuiz({ setIsQuizActive }) {
     }, [navigate]);
 
     useEffect(() => {
-        const fetchQuiz = async () => {
+        const fetchQuizAndSession = async () => {
             try {
                 const token = localStorage.getItem("token");
-                const res = await API.get(`/quiz/${quizId}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                if (res.data.hasAttempted && role === "user") {
+                const [quizRes, sessionRes] = await Promise.all([
+                    API.get(`/quiz/${quizId}`, { headers: { Authorization: `Bearer ${token}` } }),
+                    API.get(`/quiz/${quizId}/session`, { headers: { Authorization: `Bearer ${token}` } })
+                ]);
+
+                if (quizRes.data.hasAttempted && role === "user") {
                     setPopup({ message: "You have already attempted this quiz.", type: "error" });
                     setTimeout(() => navigate("/dashboard/result"), 3000);
                     return;
                 }
+
+                setQuiz(quizRes.data);
                 if (role === "user") {
-                    const { shuffled, indices } = shuffleArray(res.data.questions);
-                    setQuiz({ ...res.data, questions: shuffled });
-                    setOriginalIndices(indices);
-                    setAnswers(new Array(shuffled.length).fill(null));
-                    setTimeLeft(res.data.timer * 60);
-                } else {
-                    setQuiz(res.data);
+                    if (sessionRes.data.sessionId) {
+                        setSessionId(sessionRes.data.sessionId);
+                        setAnswers(sessionRes.data.answers);
+                        setTimeLeft(sessionRes.data.timeLeft);
+                        setViolationCount(sessionRes.data.violationCount);
+                        setIsStarted(true);
+                    } else {
+                        setAnswers(new Array(quizRes.data.questions.length).fill(null));
+                        setTimeLeft(quizRes.data.timer * 60);
+                        setViolationCount(0);
+                    }
                 }
             } catch (err) {
-                console.error("Fetch quiz failed:", err);
+                console.error("Fetch quiz or session failed:", err);
                 setPopup({ message: err.response?.data?.msg || "Error loading quiz", type: "error" });
                 setTimeout(() => navigate("/dashboard"), 3000);
             }
         };
-        fetchQuiz();
+        fetchQuizAndSession();
     }, [quizId, role, navigate]);
 
     const handleSubmit = useCallback(
-        (isAutoSubmit = false, violationMessage = "") => {
-            if (isSubmitted || isSubmitting.current) {
-                console.log("Submission blocked: isSubmitted or isSubmitting is true");
-                return;
-            }
+        async (isAutoSubmit = false, violationMessage = "", autoSubmissionType = null) => {
+            if (isSubmitted || isSubmitting.current) return;
             isSubmitting.current = true;
             setIsSubmitted(true);
             isHandlingViolation.current = true;
@@ -243,81 +237,77 @@ function AttemptQuiz({ setIsQuizActive }) {
                 focusLossTimeoutRef.current = null;
             }
 
-            const submitFn = async () => {
-                try {
-                    if (!isAutoSubmit) {
-                        const unansweredIndex = answers.findIndex((ans) => ans === null);
-                        if (unansweredIndex !== -1) {
-                            setPopup({ message: `Please answer Question ${unansweredIndex + 1} before submitting.`, type: "error" });
-                            setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
-                            setIsSubmitted(false);
-                            isSubmitting.current = false;
-                            isHandlingViolation.current = false;
-                            console.log("Manual submission failed: Unanswered question at index", unansweredIndex);
-                            return;
-                        }
-                    }
-
-                    if (isAutoSubmit && violationMessage) {
-                        setPopup({ message: violationMessage, type: "error" });
-                        popupTimeoutRef.current = setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
-                    }
-
-                    const token = localStorage.getItem("token");
-                    if (!token) {
-                        setPopup({ message: "Session expired. Please log in again.", type: "error" });
-                        setTimeout(() => navigate("/login"), 3000);
+            try {
+                let finalSubmissionType;
+                if (!isAutoSubmit) {
+                    const unansweredIndex = answers.findIndex((ans) => ans === null);
+                    if (unansweredIndex !== -1) {
+                        setPopup({ message: `Please answer Question ${unansweredIndex + 1} before submitting.`, type: "error" });
+                        setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
                         setIsSubmitted(false);
                         isSubmitting.current = false;
                         isHandlingViolation.current = false;
-                        console.log("Submission failed: No token");
                         return;
                     }
-
-                    const orderedAnswers = role === "user" ? answers.map((_, i) => answers[originalIndices.indexOf(i)]) : answers;
-                    const payload = { quizId, answers: orderedAnswers, sessionId, violationMessage };
-                    console.log("Submitting quiz with payload:", payload);
-
-                    const response = await API.post("/quiz/submit", payload, {
-                        headers: { Authorization: `Bearer ${token}` },
-                    });
-                    setPopup({ message: response.data.msg || "Quiz submitted successfully!", type: "success" });
-                    popupTimeoutRef.current = setTimeout(() => {
-                        setPopup({ message: "", type: "success" });
-                        try {
-                            document.exitFullscreen?.();
-                        } catch (err) {
-                            console.error("Failed to exit fullscreen:", err);
-                        }
-                        setIsQuizActive(false);
-                        navigate("/dashboard/result");
-                    }, 3000);
-
-                    if (isAutoSubmit && navigator.sendBeacon) {
-                        const beaconPayload = JSON.stringify(payload);
-                        const blob = new Blob([beaconPayload], { type: "application/json" });
-                        navigator.sendBeacon("/quiz/submit", blob);
-                        console.log("Sent beacon for auto-submission");
+                    finalSubmissionType = "Submitted";
+                } else {
+                    finalSubmissionType = autoSubmissionType || "Auto-Submitted";
+                    if (violationMessage) {
+                        setPopup({ message: violationMessage, type: "error" });
+                        popupTimeoutRef.current = setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
                     }
-                } catch (err) {
-                    console.error("Submission error:", err);
-                    setPopup({ message: err.response?.data?.msg || "Submission failed", type: "error" });
-                    popupTimeoutRef.current = setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
+                }
+
+                const token = localStorage.getItem("token");
+                if (!token) {
+                    setPopup({ message: "Session expired. Please log in again.", type: "error" });
+                    setTimeout(() => navigate("/login"), 3000);
                     setIsSubmitted(false);
                     isSubmitting.current = false;
                     isHandlingViolation.current = false;
+                    return;
                 }
-            };
 
-            submitFn();
+                const payload = { sessionId, submissionType: finalSubmissionType, violationMessage };
+                const response = await API.post("/quiz/submit", payload, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                // Set popup message for user feedback
+                setPopup({ message: response.data.msg || "Quiz submitted successfully!", type: "success" });
+                popupTimeoutRef.current = setTimeout(() => {
+                    setPopup({ message: "", type: "success" });
+                }, 3000);
+
+                // Exit fullscreen and navigate immediately
+                try {
+                    await document.exitFullscreen?.();
+                } catch (err) {
+                    console.error("Failed to exit fullscreen:", err);
+                }
+                setIsQuizActive(false);
+                navigate("/dashboard/result");
+
+                if (isAutoSubmit && navigator.sendBeacon) {
+                    const beaconPayload = JSON.stringify(payload);
+                    const blob = new Blob([beaconPayload], { type: "application/json" });
+                    navigator.sendBeacon("/quiz/submit", blob);
+                }
+            } catch (err) {
+                console.error("Submission error:", err);
+                setPopup({ message: err.response?.data?.msg || "Submission failed", type: "error" });
+                popupTimeoutRef.current = setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
+                setIsSubmitted(false);
+                isSubmitting.current = false;
+                isHandlingViolation.current = false;
+            }
         },
-        [quizId, answers, navigate, setIsQuizActive, originalIndices, role, isSubmitted, sessionId]
+        [sessionId, navigate, setIsQuizActive, answers, isSubmitted]
     );
 
     useEffect(() => {
         if (!isStarted && role === "user") {
             const handlePreQuizCheck = () => {
-                console.log("Checking pre-quiz conditions");
                 checkPreQuizConditions();
             };
 
@@ -347,10 +337,33 @@ function AttemptQuiz({ setIsQuizActive }) {
 
             let suppressFullscreenViolation = false;
 
+            const fetchSessionState = async () => {
+                try {
+                    const token = localStorage.getItem("token");
+                    const res = await API.get(`/quiz/${quizId}/session`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    setTimeLeft(res.data.timeLeft);
+                    setViolationCount(res.data.violationCount);
+                    if (res.data.timeLeft <= 0) {
+                        handleSubmit(true, "Time limit reached. Auto-submitting the quiz.", "Submitted: Time Up");
+                    } else if (res.data.violationCount >= MAX_VIOLATIONS) {
+                        handleSubmit(true, `Reached maximum violations (${MAX_VIOLATIONS}). Auto-submitting the quiz.`, "Max Violations Reached");
+                    } else if (quiz && res.data.timeLeft <= 300 && res.data.timeLeft > 295 && quiz.timer * 60 > 600) {
+                        setPopup({ message: "5 minutes left!", type: "warning" });
+                        popupTimeoutRef.current = setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
+                    } else if (quiz && res.data.timeLeft <= 60 && res.data.timeLeft > 55 && quiz.timer * 60 > 300) {
+                        setPopup({ message: "1 minute left!", type: "warning" });
+                        popupTimeoutRef.current = setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
+                    }
+                } catch (err) {
+                    console.error("Fetch session state failed:", err);
+                }
+            };
+
             const checkMultipleInstances = () => {
                 if (localStorage.getItem(`quizSession_${quizId}`) !== sessionId) {
-                    console.log("Violation: Multiple quiz instances detected");
-                    handleViolation("Multiple quiz instances detected", true);
+                    handleViolation("Multiple Instances Detected", true);
                 }
             };
 
@@ -385,10 +398,9 @@ function AttemptQuiz({ setIsQuizActive }) {
                 }
 
                 if (isSplitScreen) {
-                    console.log("Violation: Split-screen or resized window detected");
                     setPopup({
                         message: `Violation: Split-screen or resized window detected. Please fix within 5 seconds. Attempts left: ${MAX_VIOLATIONS - violationCount}`,
-                        type: "warning",
+                        type: "warning"
                     });
                     setTimeout(() => {
                         const isStillSplitScreen = isMobile
@@ -399,8 +411,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                             window.innerWidth < 300 ||
                             window.innerHeight < 300;
                         if (isStillSplitScreen) {
-                            console.log("Violation: Split-screen not fixed");
-                            handleViolation("Split-screen or resized window not fixed", true);
+                            handleViolation("Split-Screen Detected", true);
                         } else {
                             setPopup({ message: "", type: "success" });
                         }
@@ -410,49 +421,38 @@ function AttemptQuiz({ setIsQuizActive }) {
                 return false;
             };
 
-            const handleViolation = (type, isMajor = false) => {
-                if (isSubmitted || isHandlingViolation.current) {
-                    console.log("Violation blocked: isSubmitted or isHandlingViolation is true");
-                    return;
-                }
+            const handleViolation = async (type, isMajor = false) => {
+                if (isSubmitted || isHandlingViolation.current) return;
                 const now = Date.now();
-                if (now - lastViolationTime.current < 500) {
-                    console.log("Violation throttled:", type);
-                    return;
-                }
+                if (now - lastViolationTime.current < 500) return;
                 lastViolationTime.current = now;
                 isHandlingViolation.current = true;
-                console.log(`Violation detected: ${type}, isMajor: ${isMajor}`);
 
-                if (isMajor) {
-                    handleSubmit(true, `${type}. Auto-submitting the quiz.`);
-                    isHandlingViolation.current = false;
-                } else {
-                    setViolationCount((prev) => {
-                        const newCount = prev + 1;
-                        console.log(`Minor violation: ${type}, new violationCount: ${newCount}`);
-                        setPopup({ message: `Violation: ${type}. Attempts left: ${MAX_VIOLATIONS - newCount}`, type: "error" });
+                try {
+                    const token = localStorage.getItem("token");
+                    if (isMajor) {
+                        await handleSubmit(true, `${type}. Auto-submitting the quiz.`, type);
+                    } else {
+                        await API.post(`/quiz/${quizId}/session/${sessionId}/violation`, { violationType: type, isMajor }, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        await fetchSessionState();
+                        setPopup({ message: `Violation: ${type}. Attempts left: ${MAX_VIOLATIONS - violationCount}`, type: "error" });
                         popupTimeoutRef.current = setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
                         if (type === "Fullscreen exited") {
                             setShowOverlay(true);
                         }
-                        if (newCount >= MAX_VIOLATIONS) {
-                            console.log("Max violations reached, auto-submitting");
-                            handleSubmit(true, `Reached maximum violations (${MAX_VIOLATIONS}). Auto-submitting the quiz.`);
-                        }
-                        isHandlingViolation.current = false;
-                        return newCount;
-                    });
+                    }
+                } catch (err) {
+                    console.error("Violation handling failed:", err);
+                } finally {
+                    isHandlingViolation.current = false;
                 }
             };
 
             const fullscreenChange = () => {
-                if (isHandlingViolation.current || isSubmitted) {
-                    console.log("Fullscreen change ignored: isHandlingViolation or isSubmitted");
-                    return;
-                }
+                if (isHandlingViolation.current || isSubmitted) return;
                 const isInFullscreen = isFullscreen();
-                console.log("Fullscreen change detected, isInFullscreen:", isInFullscreen);
                 if (!suppressFullscreenViolation && !isInFullscreen) {
                     handleViolation("Fullscreen exited");
                 } else {
@@ -462,13 +462,9 @@ function AttemptQuiz({ setIsQuizActive }) {
             };
 
             const visibilityChange = () => {
-                if (isHandlingViolation.current || isSubmitted) {
-                    console.log("Visibility change ignored: isHandlingViolation or isSubmitted");
-                    return;
-                }
-                console.log("Visibility change detected, document.hidden:", document.hidden);
+                if (isHandlingViolation.current || isSubmitted) return;
                 if (document.hidden) {
-                    handleViolation("Tab or app switch", true);
+                    handleViolation("Tab Change Detected", true);
                 } else {
                     setShowOverlay(false);
                     setPopup({ message: "", type: "success" });
@@ -476,23 +472,16 @@ function AttemptQuiz({ setIsQuizActive }) {
             };
 
             const checkFocusLoss = () => {
-                if (isHandlingViolation.current || isSubmitted) {
-                    console.log("Focus check ignored: isHandlingViolation or isSubmitted");
-                    return;
-                }
+                if (isHandlingViolation.current || isSubmitted) return;
                 const now = Date.now();
-                if (now - lastFocusLossTime.current < 3000) {
-                    console.log("Focus loss check throttled");
-                    return;
-                }
+                if (now - lastFocusLossTime.current < 3000) return;
                 if (!document.hasFocus()) {
                     lastFocusLossTime.current = now;
-                    console.log("Focus loss detected via polling");
                     setCountdown(FOCUS_GRACE_PERIOD / 1000);
                     setShowOverlay(true);
                     setPopup({
                         message: `Please return focus to the quiz window within ${FOCUS_GRACE_PERIOD / 1000} seconds. Attempts left: ${MAX_VIOLATIONS - violationCount}`,
-                        type: "warning",
+                        type: "warning"
                     });
 
                     const countdownInterval = setInterval(() => {
@@ -500,8 +489,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                             if (prev <= 1) {
                                 clearInterval(countdownInterval);
                                 if (!document.hasFocus()) {
-                                    console.log("Focus not regained, escalating to major violation");
-                                    handleViolation("Window focus not regained", true);
+                                    handleViolation("Focus Loss Detected", true);
                                 } else {
                                     setPopup({ message: "", type: "success" });
                                     setShowOverlay(false);
@@ -510,7 +498,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                             }
                             setPopup({
                                 message: `Please return focus to the quiz window within ${prev - 1} seconds. Attempts left: ${MAX_VIOLATIONS - violationCount}`,
-                                type: "warning",
+                                type: "warning"
                             });
                             return prev - 1;
                         });
@@ -519,8 +507,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                     focusLossTimeoutRef.current = setTimeout(() => {
                         clearInterval(countdownInterval);
                         if (!document.hasFocus()) {
-                            console.log("Focus not regained, escalating to major violation");
-                            handleViolation("Window focus not regained", true);
+                            handleViolation("Focus Loss Detected", true);
                         } else {
                             setPopup({ message: "", type: "success" });
                             setShowOverlay(false);
@@ -537,29 +524,61 @@ function AttemptQuiz({ setIsQuizActive }) {
             };
 
             const handleKeyDown = (e) => {
-                if (isHandlingViolation.current || isSubmitted) {
-                    console.log("Keydown ignored: isHandlingViolation or isSubmitted");
-                    return;
-                }
+                if (isHandlingViolation.current || isSubmitted) return;
                 const key = e.key.toLowerCase();
-                console.log(`Keydown detected: key=${key}, ctrlKey=${e.ctrlKey}, metaKey=${e.metaKey}, shiftKey=${e.shiftKey}, altKey=${e.altKey}`);
 
-                if ((e.ctrlKey || e.metaKey) && (key === "t" || key === "n")) {
+                if (
+                    (e.altKey && key === "printscreen") ||
+                    (e.metaKey && e.shiftKey && (key === "3" || key === "4")) ||
+                    (e.metaKey && e.shiftKey && key === "s") ||
+                    (e.metaKey && key === "printscreen") ||
+                    (e.ctrlKey && key === "t") ||
+                    (e.metaKey && key === "t") ||
+                    (e.ctrlKey && key === "n") ||
+                    (e.metaKey && key === "n") ||
+                    (e.ctrlKey && e.shiftKey && key === "t") ||
+                    (e.ctrlKey && e.shiftKey && key === "n") ||
+                    (e.altKey && key === "tab") ||
+                    (e.metaKey && key === "tab") ||
+                    key === "f5" ||
+                    (e.ctrlKey && key === "r") ||
+                    (e.metaKey && key === "r")
+                ) {
                     e.preventDefault();
-                    handleViolation(`Attempt to open new ${key === "t" ? "tab" : "window"}`, true);
+                    const violationMessage =
+                        (e.altKey && key === "printscreen") ? "Alt + PrintScreen Detected" :
+                            (e.metaKey && e.shiftKey && key === "3") ? "Cmd + Shift + 3 Detected" :
+                                (e.metaKey && e.shiftKey && key === "4") ? "Cmd + Shift + 4 Detected" :
+                                    (e.metaKey && e.shiftKey && key === "s") ? "Windows + Shift + S Detected" :
+                                        (e.metaKey && key === "printscreen") ? "Windows + PrintScreen Detected" :
+                                            (e.ctrlKey && key === "t") ? "Ctrl + T Detected" :
+                                                (e.metaKey && key === "t") ? "Cmd + T Detected" :
+                                                    (e.ctrlKey && key === "n") ? "Ctrl + N Detected" :
+                                                        (e.metaKey && key === "n") ? "Cmd + N Detected" :
+                                                            (e.ctrlKey && e.shiftKey && key === "t") ? "Ctrl + Shift + T Detected" :
+                                                                (e.ctrlKey && e.shiftKey && key === "n") ? "Ctrl + Shift + N Detected" :
+                                                                    (e.altKey && key === "tab") ? "Alt + Tab Detected" :
+                                                                        (e.metaKey && key === "tab") ? "Cmd + Tab Detected" :
+                                                                            key === "f5" ? "F5 Detected" :
+                                                                                (e.ctrlKey && key === "r") ? "Ctrl + R Detected" :
+                                                                                    "Cmd + R Detected";
+                    handleViolation(violationMessage, true);
                     return;
                 }
 
                 if (
-                    key === "escape" ||
+                    key === "printscreen" ||
                     key === "meta" ||
                     key === "command" ||
-                    (e.altKey && key === "tab") ||
-                    (e.ctrlKey && (key === "c" || key === "u" || key === "s")) ||
+                    (e.ctrlKey || e.metaKey) && (key === "c" || key === "v" || key === "x") ||
+                    (e.ctrlKey || e.metaKey) && key === "p" ||
+                    (e.ctrlKey || e.metaKey) && key === "s" ||
+                    key === "f7" ||
+                    (e.altKey && (key === "arrowleft" || key === "arrowright" || key === "arrowup" || key === "arrowdown")) ||
                     (e.ctrlKey && e.shiftKey && (key === "i" || key === "j" || key === "c")) ||
                     key === "f12" ||
                     key === "f11" ||
-                    (e.metaKey && e.shiftKey && (key === "3" || key === "4"))
+                    key === "escape"
                 ) {
                     e.preventDefault();
                     if (key === "escape") {
@@ -573,17 +592,12 @@ function AttemptQuiz({ setIsQuizActive }) {
             };
 
             const disableCopyPaste = (e) => {
-                if (isHandlingViolation.current || isSubmitted) {
-                    console.log("Contextmenu ignored: isHandlingViolation or isSubmitted");
-                    return;
-                }
-                console.log("Right-click detected");
+                if (isHandlingViolation.current || isSubmitted) return;
                 e.preventDefault();
                 handleViolation("Right-click attempted");
             };
 
             const handleOrientationChange = () => {
-                console.log("Orientation change detected");
                 isRotating.current = true;
                 setTimeout(() => {
                     isRotating.current = false;
@@ -591,24 +605,16 @@ function AttemptQuiz({ setIsQuizActive }) {
             };
 
             const handlePopState = () => {
-                if (isHandlingViolation.current || isSubmitted) {
-                    console.log("Popstate ignored: isHandlingViolation or isSubmitted");
-                    return;
-                }
+                if (isHandlingViolation.current || isSubmitted) return;
                 const now = Date.now();
-                if (now - lastPopStateTime.current < THROTTLE_MS) {
-                    console.log("Popstate throttled");
-                    return;
-                }
+                if (now - lastPopStateTime.current < THROTTLE_MS) return;
                 lastPopStateTime.current = now;
-                console.log("Back button navigation attempted");
                 window.history.pushState({ quiz: true }, "", window.location.href);
-                handleSubmit(true, "Back button navigation attempted. Auto-submitting the quiz.");
+                handleSubmit(true, "Back Button Detected. Auto-submitting the quiz.", "Back Button Detected");
             };
 
             const handleResize = () => {
                 if (isHandlingViolation.current || isSubmitted || isRotating.current) return;
-                console.log("Window resize detected");
                 checkDevTools();
             };
 
@@ -641,6 +647,7 @@ function AttemptQuiz({ setIsQuizActive }) {
             }, interval);
 
             focusCheckIntervalRef.current = setInterval(checkFocusLoss, 2000);
+            const sessionStateInterval = setInterval(fetchSessionState, 1000);
 
             return () => {
                 document.body.style.userSelect = "";
@@ -663,6 +670,9 @@ function AttemptQuiz({ setIsQuizActive }) {
                 if (focusCheckIntervalRef.current) {
                     clearInterval(focusCheckIntervalRef.current);
                 }
+                if (sessionStateInterval) {
+                    clearInterval(sessionStateInterval);
+                }
                 if (popupTimeoutRef.current) {
                     clearTimeout(popupTimeoutRef.current);
                 }
@@ -673,56 +683,52 @@ function AttemptQuiz({ setIsQuizActive }) {
                 setIsQuizActive(false);
             };
         }
-    }, [isStarted, role, violationCount, setIsQuizActive, isSubmitted, sessionId, quizId, checkBrowserSupport, handleSubmit]);
-
-    useEffect(() => {
-        if (isStarted && role === "user" && timeLeft > 0 && quiz) {
-            const timerId = setInterval(() => {
-                setTimeLeft((prev) => {
-                    if (prev <= 1) {
-                        clearInterval(timerId);
-                        console.log("Timer expired, auto-submitting");
-                        handleSubmit(true, "Time limit reached. Auto-submitting the quiz.");
-                        return 0;
-                    }
-                    if (quiz.timer * 60 > 600 && prev === 300) {
-                        setPopup({ message: "5 minutes left!", type: "warning" });
-                        popupTimeoutRef.current = setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
-                    }
-                    if (quiz.timer * 60 > 300 && prev === 60) {
-                        setPopup({ message: "1 minute left!", type: "warning" });
-                        popupTimeoutRef.current = setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-            return () => clearInterval(timerId);
-        }
-    }, [isStarted, timeLeft, role, quiz, handleSubmit]);
+    }, [isStarted, role, violationCount, setIsQuizActive, isSubmitted, sessionId, quizId, checkBrowserSupport, handleSubmit, quiz]);
 
     useEffect(() => {
         if (isStarted && role === "user" && timeLeft > 0 && quiz) {
             const tokenCheckInterval = setInterval(() => {
-                console.log("Checking token expiry");
                 refreshToken();
             }, 60000);
             return () => clearInterval(tokenCheckInterval);
         }
     }, [isStarted, role, timeLeft, quiz, refreshToken]);
 
-    const handleOptionChange = (qIndex, optIndex) => {
+    const handleOptionChange = async (qIndex, optIndex) => {
         const copy = [...answers];
         copy[qIndex] = optIndex;
         setAnswers(copy);
-        console.log("Answer changed:", { question: qIndex, option: optIndex });
+        try {
+            const token = localStorage.getItem("token");
+            await API.put(`/quiz/${quizId}/session/${sessionId}/answers`, { answers: copy }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        } catch (err) {
+            console.error("Update answers failed:", err);
+        }
     };
 
     const handleStartQuiz = async () => {
-        console.log("Starting quiz, checking conditions");
-        if (!checkPreQuizConditions()) {
-            return;
+        if (!checkPreQuizConditions()) return;
+        try {
+            const token = localStorage.getItem("token");
+            const res = await API.post(`/quiz/${quizId}/session`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setSessionId(res.data.sessionId);
+            setTimeLeft(res.data.timeLeft);
+            setViolationCount(res.data.violationCount);
+            const quizRes = await API.get(`/quiz/${quizId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setQuiz(quizRes.data);
+            setAnswers(new Array(quizRes.data.questions.length).fill(null));
+            setIsStarted(true);
+        } catch (err) {
+            console.error("Start quiz failed:", err);
+            setPopup({ message: err.response?.data?.msg || "Failed to start quiz", type: "error" });
+            setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
         }
-        setIsStarted(true);
     };
 
     const closePopup = () => {
@@ -827,7 +833,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                             <li><strong>Time Limit</strong>: You have {quiz.timer} minute{quiz.timer !== 1 ? "s" : ""} to complete the quiz. The timer starts upon beginning and cannot be paused and the quiz will be auto-submitted once the time ends.</li>
                             <li><strong>Questions</strong>: The quiz contains {quiz.questions.length} question{quiz.questions.length !== 1 ? "s" : ""}. All questions must be answered before submission.</li>
                             <li><strong>Fullscreen Mode</strong>: The quiz must be taken in fullscreen mode. Exiting fullscreen will result in a violation, and failure to return may lead to auto-submission.</li>
-                            <li><strong>Violations</strong>: Actions such as pressing restricted keys (e.g., Escape, Meta) or attempting to copy content are recorded as violations. After {MAX_VIOLATIONS} violations, the quiz will auto-submit.</li>
+                            <li><strong>Violations</strong>: Actions such as pressing restricted keys (e.g., PrintScreen, Escape) or attempting to copy content are recorded as violations. After {MAX_VIOLATIONS} violations, the quiz will auto-submit.</li>
                             <li><strong>Auto-Submission Violations</strong>: Switching tabs, opening new windows/tabs, navigating away, or prolonged loss of window focus will trigger immediate auto-submission.</li>
                             <li><strong>Browser Requirements</strong>: Use the latest version of Chrome, Firefox, Edge, or Safari with a stable internet connection. Close all other applications.</li>
                             <li><strong>Technical Issues</strong>: Contact support immediately if you encounter issues. Do not refresh or navigate away, as this may trigger a violation or auto-submission.</li>
@@ -857,7 +863,7 @@ function AttemptQuiz({ setIsQuizActive }) {
         <div className="min-h-screen bg-gray-100 p-4 sm:p-6 quiz-active">
             <div className="fixed top-0 left-0 right-0 bg-white shadow-sm p-3 sm:p-4 z-50">
                 <div className="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-900 text-center">{quiz.subject} - {quiz.title}</h2>
+                    <h2 className="text-base sm:text-lg font-semibold text-gray-900 sm:text-left">{quiz.subject} - {quiz.title}</h2>
                     <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4">
                         <div className="text-xs sm:text-sm font-medium text-gray-700">
                             Violation Attempts Left: {MAX_VIOLATIONS - violationCount}
@@ -868,7 +874,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                     </div>
                 </div>
             </div>
-            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6 mt-10 sm:mt-15">
+            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6 mt-10 sm:mt-20">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} />
                 {showOverlay && !isSubmitted && (
                     <div className="fixed inset-0 w-full h-full bg-black/80 flex flex-col items-center justify-center z-[9999]">
@@ -909,7 +915,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                                                 />
                                             </div>
                                         )}
-                                        <div className="flex items-center space-x-2 pl-6">
+                                        <div className="flex items-center space-x-2 pl-6 sm:pl-0">
                                             <input
                                                 type="radio"
                                                 name={`q${i}`}

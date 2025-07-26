@@ -11,6 +11,9 @@ const resultSchema = new mongoose.Schema(
         year: { type: String, required: true }, // Store year at submission time
         branch: { type: String, required: true }, // Store branch at submission time
         division: { type: String, required: true }, // Store division at submission time
+        submissionType: { type: String, required: true }, // Store the reason for submission
+        violationMessage: { type: String }, // Store the violation message
+        sessionId: { type: String }, // Store the session ID
     },
     { timestamps: true } // Add timestamps for createdAt and updatedAt
 );
