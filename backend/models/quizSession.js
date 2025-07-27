@@ -9,7 +9,8 @@ const quizSessionSchema = new mongoose.Schema({
     isActive: { type: Boolean, default: true },
     lastUpdated: { type: Date, default: Date.now },
     timer: { type: Number, required: true }, // Quiz duration in seconds
-    violationCount: { type: Number, default: 0 } // Number of violations
+    violationCount: { type: Number, default: 0 }, // Number of violations
+    lastHeartbeat: { type: Date, default: Date.now } // Periodic check for connectivity(Sync)
 });
 
 module.exports = mongoose.model("QuizSession", quizSessionSchema);
