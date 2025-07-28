@@ -126,11 +126,8 @@ function QuizReport() {
             const matchesBranch = !branchFilter || String(entry.branch || "").toLowerCase().includes(branchFilter.toLowerCase());
             const matchesDivision = !divisionFilter || entry.division === divisionFilter;
             const matchesDate =
-                !fromDate ||
-                !toDate ||
-                (entry.createdAt &&
-                    new Date(entry.createdAt).toLocaleDateString("en-US") >= new Date(fromDate).toLocaleDateString("en-US") &&
-                    new Date(entry.createdAt).toLocaleDateString("en-US") <= new Date(toDate).toLocaleDateString("en-US"));
+                (!fromDate || (entry.createdAt && new Date(entry.createdAt).toLocaleDateString("en-US") >= new Date(fromDate).toLocaleDateString("en-US"))) &&
+                (!toDate || (entry.createdAt && new Date(entry.createdAt).toLocaleDateString("en-US") <= new Date(toDate).toLocaleDateString("en-US")));
             return matchesSearch && matchesSubjectTopic && matchesYear && matchesBranch && matchesDivision && matchesDate;
         });
 

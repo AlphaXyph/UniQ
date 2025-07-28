@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Quiz = require("../models/quiz");
 const Result = require("../models/result");
 const cloudinary = require("../configs/cloudinary");
@@ -228,11 +229,38 @@ const toggleQuizVisibility = async (req, res) => {
     }
 };
 
+const duplicateQuiz = async (req, res) => {
+    if (req.user.role !== "admin") return res.status(403).json({ msg: "Admin access required" });
+    try {
+        const quiz = await Quiz.findById(req.params.quizId);
+        if (!quiz) return res.status(404).json({ msg: "Quiz not found" });
+        if (quiz.createdBy.toString() !== req.user.id) {
+            return res.status(403).json({ msg: "You can only duplicate quizzes you created" });
+        }
+
+        const newQuiz = new Quiz({
+            ...quiz._doc,
+            _id: new mongoose.Types.ObjectId(),
+            createdBy: req.user.id,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            isVisible: false, // New quiz is hidden by default
+        });
+
+        await newQuiz.save();
+        res.status(201).json({ msg: "Quiz duplicated successfully" });
+    } catch (err) {
+        console.error("Duplicate quiz error:", err);
+        res.status(500).json({ msg: "Failed to duplicate quiz" });
+    }
+};
+
 module.exports = {
     createQuiz,
     getAllQuizzes,
     getQuiz,
     updateQuiz,
     deleteQuiz,
-    toggleQuizVisibility
+    toggleQuizVisibility,
+    duplicateQuiz
 };

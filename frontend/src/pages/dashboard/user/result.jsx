@@ -8,6 +8,9 @@ function Result() {
     const [canViewAnswersMap, setCanViewAnswersMap] = useState({});
     const [popup, setPopup] = useState({ message: "", type: "success" });
     const [subjectTopicQuery, setSubjectTopicQuery] = useState("");
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     useEffect(() => {
         const fetchResults = async () => {
@@ -50,6 +53,12 @@ function Result() {
         setPopup({ message: "", type: "success" });
     };
 
+    const clearFilters = () => {
+        setSubjectTopicQuery("");
+        setFromDate("");
+        setToDate("");
+    };
+
     const getScoreColor = (score, total) => {
         const percentage = total > 0 ? (score / total) * 100 : 0;
         if (percentage >= 70) return "text-green-600";
@@ -86,20 +95,22 @@ function Result() {
     const filteredResults = Object.entries(groupedResults).reduce((acc, [date, results]) => {
         const filtered = results.filter(
             (r) =>
-                !subjectTopicQuery ||
-                (() => {
-                    const subjectTopicLower = subjectTopicQuery.toLowerCase();
-                    const combined = `${r.quiz?.subject || ""} ${r.quiz?.title || ""}`.toLowerCase();
-                    if (combined.includes(subjectTopicLower)) return true;
-                    if (subjectTopicLower.includes(" - ")) {
-                        const [subjectPart, topicPart] = subjectTopicLower.split(" - ").map((s) => s.trim());
-                        return (
-                            String(r.quiz?.subject || "").toLowerCase().includes(subjectPart) &&
-                            String(r.quiz?.title || "").toLowerCase().includes(topicPart)
-                        );
-                    }
-                    return false;
-                })()
+                (!subjectTopicQuery ||
+                    (() => {
+                        const subjectTopicLower = subjectTopicQuery.toLowerCase();
+                        const combined = `${r.quiz?.subject || ""} ${r.quiz?.title || ""}`.toLowerCase();
+                        if (combined.includes(subjectTopicLower)) return true;
+                        if (subjectTopicLower.includes(" - ")) {
+                            const [subjectPart, topicPart] = subjectTopicLower.split(" - ").map((s) => s.trim());
+                            return (
+                                String(r.quiz?.subject || "").toLowerCase().includes(subjectPart) &&
+                                String(r.quiz?.title || "").toLowerCase().includes(topicPart)
+                            );
+                        }
+                        return false;
+                    })()) &&
+                (!fromDate || (r.createdAt && new Date(r.createdAt).toLocaleDateString("en-US") >= new Date(fromDate).toLocaleDateString("en-US"))) &&
+                (!toDate || (r.createdAt && new Date(r.createdAt).toLocaleDateString("en-US") <= new Date(toDate).toLocaleDateString("en-US")))
         );
         if (filtered.length > 0) acc[date] = filtered;
         return acc;
@@ -112,15 +123,58 @@ function Result() {
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                     <i className="fas fa-chart-bar text-xl sm:text-2xl"></i> Your Results
                 </h2>
-                <div className="mb-4">
-                    <input
-                        type="text"
-                        value={subjectTopicQuery}
-                        onChange={handleSubjectTopicSearchChange}
-                        placeholder="Search by Subject - Topic"
-                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
+                <div className="flex items-center gap-2 mb-2">
+                    <label className="block font-semibold text-sm text-gray-700">Filters</label>
+                    <button
+                        type="button"
+                        onClick={() => setIsFilterOpen(!isFilterOpen)}
+                        className="text-blue-500 hover:text-blue-700 text-base p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 transition"
+                        aria-label="Toggle filters"
+                    >
+                        <i className="fas fa-filter"></i>
+                    </button>
                 </div>
+                {isFilterOpen && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-4">
+                        <div>
+                            <label className="block mb-1 font-semibold text-sm text-gray-700">Subject - Topic</label>
+                            <input
+                                type="text"
+                                value={subjectTopicQuery}
+                                onChange={handleSubjectTopicSearchChange}
+                                placeholder="Search by Subject - Topic"
+                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block mb-1 font-semibold text-sm text-gray-700">From Date</label>
+                            <input
+                                type="date"
+                                value={fromDate}
+                                onChange={(e) => setFromDate(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block mb-1 font-semibold text-sm text-gray-700">To Date</label>
+                            <input
+                                type="date"
+                                value={toDate}
+                                onChange={(e) => setToDate(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            />
+                        </div>
+                        <div className="sm:col-span-3 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={clearFilters}
+                                className="px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm"
+                            >
+                                Reset Filters
+                            </button>
+                        </div>
+                    </div>
+                )}
                 {sortedDates.length === 0 && (
                     <p className="text-gray-500 text-sm">No results found.</p>
                 )}
