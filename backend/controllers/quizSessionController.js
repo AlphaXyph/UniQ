@@ -37,7 +37,7 @@ const checkExpiredSessions = async () => {
                     }
                 } else if (lastHeartbeat > (MAX_HEARTBEAT_FAILURES * HEARTBEAT_INTERVAL + CONNECTION_TIMEOUT)) {
                     submissionType = "Disconnected";
-                    violationMessage = "User disconnected for more than 2 minutes after missed heartbeats.";
+                    violationMessage = "User disconnected for more than 2 minutes.";
                 } else {
                     sessionDoc.isProcessing = false;
                     await sessionDoc.save({ session });

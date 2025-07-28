@@ -20,7 +20,6 @@ function AttemptQuiz({ setIsQuizActive }) {
     const [showOverlay, setShowOverlay] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState("connected");
     const [connectionCountdown, setConnectionCountdown] = useState(null);
-    const [focusCountdown, setFocusCountdown] = useState(null);
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem("user"));
     const role = user?.role || "user";
@@ -29,20 +28,16 @@ function AttemptQuiz({ setIsQuizActive }) {
     const lastViolationTime = useRef(0);
     const lastPopStateTime = useRef(0);
     const THROTTLE_MS = 500;
-    const FOCUS_GRACE_PERIOD = 5000;
     const HEARTBEAT_INTERVAL = 5000;
     const CONNECTION_TIMEOUT = 120000;
     const MAX_HEARTBEAT_FAILURES = 2;
     const fullscreenCheckIntervalRef = useRef(null);
-    const focusCheckIntervalRef = useRef(null);
     const heartbeatIntervalRef = useRef(null);
     const connectionTimeoutRef = useRef(null);
     const isHandlingViolation = useRef(false);
     const popupTimeoutRef = useRef(null);
     const isRotating = useRef(false);
     const isSubmitting = useRef(false);
-    const focusLossTimeoutRef = useRef(null);
-    const lastFocusLossTime = useRef(0);
     const heartbeatFailureCount = useRef(0);
 
     const checkBrowserSupport = useCallback(() => {
@@ -238,25 +233,17 @@ function AttemptQuiz({ setIsQuizActive }) {
                 clearInterval(fullscreenCheckIntervalRef.current);
                 fullscreenCheckIntervalRef.current = null;
             }
-            if (focusCheckIntervalRef.current) {
-                clearInterval(focusCheckIntervalRef.current);
-                focusCheckIntervalRef.current = null;
-            }
             if (heartbeatIntervalRef.current) {
                 clearInterval(heartbeatIntervalRef.current);
                 heartbeatIntervalRef.current = null;
             }
             if (connectionTimeoutRef.current) {
+                clearTimeout(connectionTimeoutRef.currentVcurrentWidth = window.innerWidth);
                 clearTimeout(connectionTimeoutRef.current);
-                connectionTimeoutRef.current = null;
             }
             if (popupTimeoutRef.current) {
                 clearTimeout(popupTimeoutRef.current);
                 popupTimeoutRef.current = null;
-            }
-            if (focusLossTimeoutRef.current) {
-                clearTimeout(focusLossTimeoutRef.current);
-                focusLossTimeoutRef.current = null;
             }
 
             let finalSubmissionType = autoSubmissionType || "Auto-Submitted";
@@ -389,7 +376,6 @@ function AttemptQuiz({ setIsQuizActive }) {
                 });
                 setConnectionStatus("connected");
                 setConnectionCountdown(null);
-                setFocusCountdown(null);
                 heartbeatFailureCount.current = 0;
                 if (connectionTimeoutRef.current) {
                     clearTimeout(connectionTimeoutRef.current);
@@ -486,7 +472,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                     setTimeLeft(res.data.timeLeft);
                     setLocalTimeLeft(res.data.timeLeft);
                     setViolationCount(res.data.violationCount);
-                    setLocalViolationCount(res.data.violationCount); // Sync local count with backend
+                    setLocalViolationCount(res.data.violationCount);
                     if (res.data.submitted) {
                         handleSubmit(true, "Quiz auto-submitted by server.", res.data.submissionType);
                     } else if (res.data.violationCount >= MAX_VIOLATIONS) {
@@ -540,24 +526,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                 }
 
                 if (isSplitScreen) {
-                    setPopup({
-                        message: `Violation: Split-screen or resized window detected. Please fix within 5 seconds. Attempts left: ${MAX_VIOLATIONS - violationCount}`,
-                        type: "warning"
-                    });
-                    setTimeout(() => {
-                        const isStillSplitScreen = isMobile
-                            ? (window.innerWidth < (window.screen.availWidth || window.screen.width) - 50 ||
-                                window.innerHeight < (window.screen.availHeight || window.screen.height) - (isIOS ? 150 : 100))
-                            : (window.outerWidth - window.innerWidth) > 100 ||
-                            (window.outerHeight - window.innerHeight) > 100 ||
-                            window.innerWidth < 300 ||
-                            window.innerHeight < 300;
-                        if (isStillSplitScreen) {
-                            handleViolation("Split-Screen Detected", true);
-                        } else {
-                            setPopup({ message: "", type: "success" });
-                        }
-                    }, 5000);
+                    handleViolation("Split-Screen || Dev-Tools Detected", true);
                     return true;
                 }
                 return false;
@@ -575,7 +544,6 @@ function AttemptQuiz({ setIsQuizActive }) {
                     if (isMajor) {
                         await handleSubmit(true, `${type}. Auto-submitting the quiz.`, type);
                     } else {
-                        // Increment local violation count for immediate popup display
                         setLocalViolationCount(prev => prev + 1);
                         setPopup({
                             message: `Violation: ${type}. Attempts left: ${MAX_VIOLATIONS - (localViolationCount + 1)}`,
@@ -583,7 +551,6 @@ function AttemptQuiz({ setIsQuizActive }) {
                         });
                         popupTimeoutRef.current = setTimeout(() => setPopup({ message: "", type: "success" }), 3000);
 
-                        // Post violation to backend and sync state
                         await API.post(`/quiz/${quizId}/session/${sessionId}/violation`, { violationType: type, isMajor }, {
                             headers: { Authorization: `Bearer ${token}` }
                         });
@@ -595,7 +562,6 @@ function AttemptQuiz({ setIsQuizActive }) {
                     }
                 } catch (err) {
                     console.error("Violation handling failed:", err);
-                    // Sync with backend on failure
                     await fetchSessionState();
                     setPopup({
                         message: `Violation recorded, but server sync failed. Attempts left: ${MAX_VIOLATIONS - violationCount}`,
@@ -623,55 +589,20 @@ function AttemptQuiz({ setIsQuizActive }) {
                 if (document.hidden) {
                     handleViolation("Tab Change Detected", true);
                 } else {
-                    setShowOverlay(false);
-                    setPopup({ message: "", type: "success" });
+                    if (checkDevTools()) return;
+                    if (!document.hasFocus()) {
+                        handleViolation("Focus Loss Detected", true);
+                    } else {
+                        setShowOverlay(false);
+                        setPopup({ message: "", type: "success" });
+                    }
                 }
             };
 
-            const checkFocusLoss = () => {
-                if (isHandlingViolation.current || isSubmitted) return;
-                const now = Date.now();
-                if (now - lastFocusLossTime.current < 3000) return;
-                if (!document.hasFocus()) {
-                    lastFocusLossTime.current = now;
-                    setFocusCountdown(5);
-                    setPopup({
-                        message: `Please return focus to the quiz window within ${focusCountdown} seconds. Attempts left: ${MAX_VIOLATIONS - violationCount}`,
-                        type: "warning"
-                    });
-                    setShowOverlay(true);
-
-                    const countdownInterval = setInterval(() => {
-                        setFocusCountdown((prev) => {
-                            if (prev <= 1) {
-                                clearInterval(countdownInterval);
-                                return 0;
-                            }
-                            return prev - 1;
-                        });
-                        setPopup({
-                            message: `Please return focus to the quiz window within ${focusCountdown - 1} seconds. Attempts left: ${MAX_VIOLATIONS - violationCount}`,
-                            type: "warning"
-                        });
-                    }, 1000);
-
-                    focusLossTimeoutRef.current = setTimeout(() => {
-                        clearInterval(countdownInterval);
-                        if (!document.hasFocus()) {
-                            handleViolation("Focus Loss Detected", true);
-                        } else {
-                            setPopup({ message: "", type: "success" });
-                            setShowOverlay(false);
-                            setFocusCountdown(null);
-                        }
-                    }, FOCUS_GRACE_PERIOD);
-                } else if (focusLossTimeoutRef.current) {
-                    clearTimeout(focusLossTimeoutRef.current);
-                    focusLossTimeoutRef.current = null;
-                    setShowOverlay(false);
-                    setPopup({ message: "", type: "success" });
-                    setFocusCountdown(null);
-                }
+            const handleBlur = () => {
+                if (isHandlingViolation.current || isSubmitted || document.hidden) return;
+                if (checkDevTools()) return;
+                handleViolation("Focus Loss Detected", true);
             };
 
             const handleKeyDown = (e) => {
@@ -784,10 +715,11 @@ function AttemptQuiz({ setIsQuizActive }) {
             window.addEventListener("orientationchange", handleOrientationChange);
             window.addEventListener("popstate", handlePopState);
             window.addEventListener("resize", handleResize);
+            window.addEventListener("blur", handleBlur);
 
             const ua = navigator.userAgent.toLowerCase();
             const isMobile = /mobile|android|iphone|ipad|ipod|tablet/.test(ua);
-            const interval = isMobile ? 1500 : 1000;
+            const interval = isMobile ? 1000 : 1000;
             fullscreenCheckIntervalRef.current = setInterval(() => {
                 if (isHandlingViolation.current || isSubmitted) return;
                 checkMultipleInstances();
@@ -797,7 +729,6 @@ function AttemptQuiz({ setIsQuizActive }) {
                 }
             }, interval);
 
-            focusCheckIntervalRef.current = setInterval(checkFocusLoss, 2000);
             const sessionStateInterval = setInterval(fetchSessionState, 1000);
             startHeartbeat();
 
@@ -816,11 +747,9 @@ function AttemptQuiz({ setIsQuizActive }) {
                 window.removeEventListener("orientationchange", handleOrientationChange);
                 window.removeEventListener("popstate", handlePopState);
                 window.removeEventListener("resize", handleResize);
+                window.removeEventListener("blur", handleBlur);
                 if (fullscreenCheckIntervalRef.current) {
                     clearInterval(fullscreenCheckIntervalRef.current);
-                }
-                if (focusCheckIntervalRef.current) {
-                    clearInterval(focusCheckIntervalRef.current);
                 }
                 if (heartbeatIntervalRef.current) {
                     clearInterval(heartbeatIntervalRef.current);
@@ -831,9 +760,6 @@ function AttemptQuiz({ setIsQuizActive }) {
                 if (popupTimeoutRef.current) {
                     clearTimeout(popupTimeoutRef.current);
                 }
-                if (focusLossTimeoutRef.current) {
-                    clearTimeout(focusLossTimeoutRef.current);
-                }
                 if (connectionTimeoutRef.current) {
                     clearTimeout(connectionTimeoutRef.current);
                 }
@@ -841,7 +767,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                 setIsQuizActive(false);
             };
         }
-    }, [isStarted, role, setIsQuizActive, isSubmitted, sessionId, quizId, checkBrowserSupport, handleSubmit, quiz, startHeartbeat, focusCountdown, violationCount, localViolationCount]);
+    }, [isStarted, role, setIsQuizActive, isSubmitted, sessionId, quizId, checkBrowserSupport, handleSubmit, quiz, startHeartbeat, violationCount, localViolationCount]);
 
     useEffect(() => {
         if (isStarted && role === "user" && timeLeft > 0 && quiz) {
@@ -898,7 +824,6 @@ function AttemptQuiz({ setIsQuizActive }) {
         }
         setPopup({ message: "", type: "success" });
         setConnectionCountdown(null);
-        setFocusCountdown(null);
     };
 
     const formatTime = (seconds) => {
@@ -996,7 +921,7 @@ function AttemptQuiz({ setIsQuizActive }) {
                             <li><strong>Questions</strong>: The quiz contains {quiz.questions.length} question{quiz.questions.length !== 1 ? "s" : ""}. All questions must be answered before submission.</li>
                             <li><strong>Fullscreen Mode</strong>: The quiz must be taken in fullscreen mode. Exiting fullscreen will result in a violation, and failure to return may lead to auto-submission.</li>
                             <li><strong>Violations</strong>: Actions such as pressing restricted keys (e.g., PrintScreen, Escape) or attempting to copy content are recorded as violations. After {MAX_VIOLATIONS} violations, the quiz will auto-submit.</li>
-                            <li><strong>Auto-Submission Violations</strong>: Switching tabs, opening new windows/tabs, navigating away, or prolonged loss of window focus will trigger immediate auto-submission.</li>
+                            <li><strong>Auto-Submission Violations</strong>: Switching tabs, opening new windows/tabs, navigating away, or loss of window focus will trigger immediate auto-submission.</li>
                             <li><strong>Browser Requirements</strong>: Use the latest version of Chrome, Firefox, Edge, or Safari with a stable internet connection. Close all other applications.</li>
                             <li><strong>Technical Issues</strong>: Contact support immediately if you encounter issues. Do not refresh or navigate away, as this may trigger a violation or auto-submission.</li>
                         </ul>
