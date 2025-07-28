@@ -423,7 +423,7 @@ function CreateQuiz() {
                         <div className="flex flex-row items-center gap-1 flex-nowrap">
                             <div className="relative flex-grow">
                                 <div
-                                    className="w-full border border-gray-300 p-2 rounded-md bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm truncate"
+                                    className="w-full border border-gray-300 p-2 rounded-md bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs sm:text-sm truncate"
                                     onClick={() => setIsAcademicYearDropdownOpen(!isAcademicYearDropdownOpen)}
                                 >
                                     {academicYear || "Select Academic Year"}
@@ -459,7 +459,7 @@ function CreateQuiz() {
                                 <button
                                     type="button"
                                     onClick={() => setShowNewAcademicYearInput(true)}
-                                    className="px-2 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs"
+                                    className="px-2 py-1.5 bg-cyan-500 text-white rounded-md hover:bg-cyan-600 text-xs"
                                 >
                                     <i className="fas fa-plus"></i>
                                 </button>
@@ -473,7 +473,7 @@ function CreateQuiz() {
                                     onChange={(e) => setNewAcademicYearStart(e.target.value)}
                                     placeholder="YYYY"
                                     maxLength={4}
-                                    className="w-20 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                                    className="w-20 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs"
                                 />
                                 <span className="text-gray-700">-</span>
                                 <input
@@ -482,7 +482,7 @@ function CreateQuiz() {
                                     onChange={(e) => setNewAcademicYearEnd(e.target.value)}
                                     placeholder="YYYY"
                                     maxLength={4}
-                                    className="w-20 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                                    className="w-20 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs"
                                 />
                                 <button
                                     type="button"
@@ -500,7 +500,7 @@ function CreateQuiz() {
                         <div className="flex flex-row items-center gap-1 flex-nowrap">
                             <div className="relative flex-grow">
                                 <div
-                                    className="w-full border border-gray-300 p-2 rounded-md bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm truncate"
+                                    className="w-full border border-gray-300 p-2 rounded-md bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs sm:text-sm truncate"
                                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                 >
                                     {subject || "Select Subject"}
@@ -536,7 +536,7 @@ function CreateQuiz() {
                                 <button
                                     type="button"
                                     onClick={() => setShowNewSubjectInput(true)}
-                                    className="px-2 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs"
+                                    className="px-2 py-1.5 bg-cyan-500 text-white rounded-md hover:bg-cyan-600 text-xs"
                                 >
                                     <i className="fas fa-plus"></i>
                                 </button>
@@ -549,7 +549,7 @@ function CreateQuiz() {
                                     value={newSubjectName}
                                     onChange={(e) => setNewSubjectName(e.target.value.slice(0, 20))}
                                     placeholder="New Subject Name"
-                                    className="flex-grow border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                                    className="flex-grow border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs"
                                     maxLength={20}
                                 />
                                 <button
@@ -569,7 +569,7 @@ function CreateQuiz() {
                             <input
                                 type="text"
                                 placeholder="Quiz Title"
-                                className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs sm:text-sm"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value.slice(0, 40))}
                                 maxLength={40}
@@ -579,7 +579,7 @@ function CreateQuiz() {
                             <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Quiz Timer (minutes)</label>
                             <input
                                 type="number"
-                                className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs sm:text-sm"
                                 value={timer}
                                 onChange={(e) => setTimer(Number(e.target.value))}
                                 min={1}
@@ -593,20 +593,20 @@ function CreateQuiz() {
                             <button
                                 type="button"
                                 onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                className=" text-blue-500 hover:text-blue-700 text-base p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 transition"
+                                className=" text-green-500 hover:text-green-600 text-base p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 transition"
                                 aria-label="Toggle filters"
                             >
                                 <i className="fas fa-filter"></i>
                             </button>
                         </div>
                         {isFilterOpen && (
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 border rounded-2xl bg-gray-100 sm:gap-4 mb-4 p-2 sm:p-4 md:p-6">
                                 <div>
                                     <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Year</label>
                                     <select
                                         value={year}
                                         onChange={(e) => setYear(e.target.value)}
-                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs sm:text-sm"
                                     >
                                         <option value="">Select Year</option>
                                         {["FY", "SY", "TY", "4TH"].map((y) => (
@@ -622,7 +622,7 @@ function CreateQuiz() {
                                         onChange={(e) => setBranch(e.target.value.slice(0, 4))}
                                         placeholder="Branch"
                                         maxLength={4}
-                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs sm:text-sm"
                                     />
                                 </div>
                                 <div>
@@ -630,7 +630,7 @@ function CreateQuiz() {
                                     <select
                                         value={division}
                                         onChange={(e) => setDivision(e.target.value)}
-                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs sm:text-sm"
                                     >
                                         <option value="">Select Division</option>
                                         {["A", "B", "C", "D"].map((d) => (
@@ -644,7 +644,7 @@ function CreateQuiz() {
                     <div>
                         <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Upload Questions (CSV)</label>
                         <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
-                            <label className="inline-block w-auto px-3 py-2 bg-blue-500 text-white rounded-md cursor-pointer hover:bg-blue-600 text-xs sm:text-sm text-center">
+                            <label className="inline-block w-auto px-3 py-2 bg-cyan-500 text-white rounded-md cursor-pointer hover:bg-cyan-600 text-xs sm:text-sm text-center">
                                 <i className="fa-solid fa-arrow-up-from-bracket mr-1"></i> Upload CSV
                                 <input
                                     type="file"
@@ -656,14 +656,14 @@ function CreateQuiz() {
                             </label>
                             <button
                                 type="button"
-                                className="inline-block w-auto px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs sm:text-sm text-center"
+                                className="inline-block w-auto px-3 py-2 bg-cyan-500 text-white rounded-md hover:bg-cyan-600 text-xs sm:text-sm text-center"
                                 onClick={handleDownloadSample}
                             >
                                 <i className="fa-solid fa-download mr-1"></i> Sample.csv
                             </button>
                             <button
                                 type="button"
-                                className="inline-block w-auto px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs sm:text-sm text-center"
+                                className="inline-block w-auto px-3 py-2 bg-cyan-500 text-white rounded-md hover:bg-cyan-600 text-xs sm:text-sm text-center"
                                 onClick={() => setIsChatbotOpen(true)}
                             >
                                 <i className="fas fa-robot mr-1"></i> Create with AI
@@ -688,7 +688,7 @@ function CreateQuiz() {
                                     <label className="block font-semibold text-xs sm:text-sm text-gray-700">Question:</label>
                                     <textarea
                                         placeholder={`Question ${i + 1}`}
-                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm resize-none"
                                         value={q.question}
                                         onChange={(e) => adjustTextareaRows(e.target, i)}
                                         rows={1}
@@ -706,7 +706,7 @@ function CreateQuiz() {
                                             </button>
                                         </div>
                                     )}
-                                    <label className="inline-block px-2 py-1 bg-blue-500 text-white rounded-md cursor-pointer hover:bg-blue-600 text-xs text-center">
+                                    <label className="inline-block px-2 py-1 bg-cyan-500 text-white rounded-md cursor-pointer hover:bg-cyan-600 text-xs text-center">
                                         <i className="fas fa-image mr-1"></i> Add Image
                                         <input
                                             type="file"
@@ -739,12 +739,12 @@ function CreateQuiz() {
                                                 <div className="flex items-start gap-2">
                                                     <textarea
                                                         placeholder={`Option ${j + 1}`}
-                                                        className="flex-1 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                                                        className="flex-1 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm resize-none"
                                                         value={opt.text}
                                                         onChange={(e) => adjustTextareaRows(e.target, i, j)}
                                                         rows={1}
                                                     />
-                                                    <label className="inline-block px-2 py-1 bg-blue-500 text-white rounded-md cursor-pointer hover:bg-blue-600 text-xs text-center self-start">
+                                                    <label className="inline-block px-2 py-1 bg-cyan-500 text-white rounded-md cursor-pointer hover:bg-cyan-600 text-xs text-center self-start">
                                                         <i className="fas fa-image mr-1"></i> Add Image
                                                         <input
                                                             type="file"
@@ -768,7 +768,7 @@ function CreateQuiz() {
                                             copy[i].answer = Number(e.target.value);
                                             setQuestions(copy);
                                         }}
-                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                        className="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm"
                                     >
                                         {[0, 1, 2, 3].map((n) => (
                                             <option key={n} value={n}>

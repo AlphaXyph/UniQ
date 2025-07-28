@@ -17,6 +17,8 @@ function AllReports() {
     const [divisionFilter, setDivisionFilter] = useState("");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
+    const [selectedResults, setSelectedResults] = useState([]);
+    const [confirmText, setConfirmText] = useState("");
 
     const fetchResults = useCallback(async () => {
         setIsLoading(true);
@@ -25,21 +27,7 @@ function AllReports() {
             const res = await API.get("/result/all", {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            const formattedResults = res.data.map((r) => ({
-                resultId: r._id,
-                rollNo: r.rollNo || "N/A",
-                name: `${r.student?.name || "Unknown"} ${r.student?.surname || ""}`.trim(),
-                email: r.student?.email || "No Email",
-                year: r.year || "N/A",
-                branch: r.branch || "N/A",
-                division: r.division || "N/A",
-                from: `${r.year || "N/A"}-${r.branch || "N/A"}-${r.division || "N/A"}`,
-                subject: r.quiz?.subject || "Unknown",
-                topic: r.quiz?.title || "Unknown",
-                score: `${r.score ?? 0}/${r.total ?? 0}`,
-                createdAt: r.createdAt,
-            }));
-            setResults(formattedResults);
+            setResults(res.data);
         } catch (err) {
             setPopup({ message: err.response?.data?.msg || "Error loading results", type: "error" });
         } finally {
@@ -94,6 +82,39 @@ function AllReports() {
         if (percentage >= 70) return "text-green-600";
         if (percentage >= 40) return "text-orange-600";
         return "text-red-600";
+    };
+
+    const handleSelect = (resultId) => {
+        setSelectedResults((prev) =>
+            prev.includes(resultId)
+                ? prev.filter((id) => id !== resultId)
+                : [...prev, resultId]
+        );
+    };
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            const allVisibleIds = sortedDates
+                .flatMap((date) => groupedResults[date])
+                .map((entry) => entry.resultId);
+            setSelectedResults(allVisibleIds);
+        } else {
+            setSelectedResults([]);
+        }
+    };
+
+    const handleDelete = async (ids) => {
+        try {
+            const token = localStorage.getItem("token");
+            await API.post("/result/delete-many", { ids }, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            setPopup({ message: "Results deleted successfully", type: "success" });
+            setSelectedResults([]);
+            fetchResults();
+        } catch (err) {
+            setPopup({ message: err.response?.data?.msg || "Error deleting results", type: "error" });
+        }
     };
 
     const groupedResults = useMemo(() => {
@@ -182,8 +203,13 @@ function AllReports() {
         });
     }, [groupedResults]);
 
+    const areAllSelected = useMemo(() => {
+        const visibleResults = sortedDates.flatMap((date) => groupedResults[date]);
+        return visibleResults.length > 0 && visibleResults.every((entry) => selectedResults.includes(entry.resultId));
+    }, [selectedResults, sortedDates, groupedResults]);
+
     const downloadCSV = () => {
-        const headers = ["Roll No,Name,Year,Branch,Division,Subject,Topic,Marks,Total,Submission Time"];
+        const headers = ["Roll No,Name,Year,Branch,Division,Subject,Topic,Marks,Total,Submission Time,Submission Type"];
         const rows = sortedDates
             .flatMap((date) => groupedResults[date])
             .map((entry) => {
@@ -209,6 +235,7 @@ function AllReports() {
                     marks,
                     total,
                     `"${submissionTime}"`,
+                    `"${String(entry.submissionType || "N/A")}"`,
                 ].join(",");
             });
         const csvContent = [headers, ...rows].join("\n");
@@ -226,8 +253,14 @@ function AllReports() {
     return (
         <div className="min-h-screen bg-gray-100 p-4 sm:p-6 md:p-8">
             <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-4 sm:p-6">
-                <Popup message={popup.message} type={popup.type} onClose={closePopup} />
-                {/* SEARCH + FILTER SECTION */}
+                <Popup
+                    message={popup.message}
+                    type={popup.type}
+                    onClose={closePopup}
+                    confirmAction={popup.confirmAction}
+                    confirmInput={confirmText}
+                    setConfirmInput={setConfirmText}
+                />
                 <div className="flex items-center gap-2 mb-3 sm:mb-4">
                     <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2">
                         <i className="fas fa-chart-bar text-xl sm:text-2xl"></i> All Quiz Results
@@ -259,22 +292,24 @@ function AllReports() {
                         <button
                             type="button"
                             onClick={() => setIsFilterOpen(!isFilterOpen)}
-                            className="text-blue-500 hover:text-blue-700 text-base p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 transition"
+                            className="text-green-500 hover:text-green-600 text-base p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 transition"
                             aria-label="Toggle filters"
                         >
                             <i className="fas fa-filter"></i>
                         </button>
                     </div>
-                    <button
-                        onClick={downloadCSV}
-                        className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
-                        disabled={isLoading || sortedDates.length === 0}
-                    >
-                        <i className="fas fa-download"></i> Download CSV
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={downloadCSV}
+                            className="flex items-center gap-2 px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
+                            disabled={isLoading || sortedDates.length === 0}
+                        >
+                            <i className="fas fa-download"></i> Download CSV
+                        </button>
+                    </div>
                 </div>
                 {isFilterOpen && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 mb-4 p-2 sm:p-4 md:p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 border rounded-2xl bg-gray-100 sm:gap-4 mb-4 p-2 sm:p-4 md:p-6">
                         <div>
                             <label className="block mb-1 font-semibold text-xs sm:text-sm text-gray-700">Year</label>
                             <select
@@ -367,6 +402,27 @@ function AllReports() {
                         </div>
                     </div>
                 )}
+                {selectedResults.length > 0 && (
+                    <div className="flex justify-end mb-4">
+                        <button
+                            onClick={() => {
+                                setPopup({
+                                    message: "Are you sure you want to delete the selected results?<br />Type <strong>YES</strong> to confirm.",
+                                    type: "error",
+                                    confirmAction: (input) => {
+                                        if (input === "YES") {
+                                            handleDelete(selectedResults);
+                                        }
+                                    },
+                                });
+                                setConfirmText("");
+                            }}
+                            className="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-700 text-sm font-medium"
+                        >
+                            Delete Selected
+                        </button>
+                    </div>
+                )}
                 {isLoading ? (
                     <p className="text-gray-500 text-sm">Loading results...</p>
                 ) : sortedDates.length === 0 ? (
@@ -380,9 +436,16 @@ function AllReports() {
                         <div key={date} className="mb-6">
                             <h3 className="text-sm font-semibold text-gray-700 mb-2">{date}</h3>
                             <div className="overflow-x-auto">
-                                <table className="w-full border-collapse text-sm">
+                                <table className="w-full border-collapse text-sm no-select">
                                     <thead>
                                         <tr className="bg-gray-200">
+                                            <th className="p-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={areAllSelected}
+                                                    onChange={handleSelectAll}
+                                                />
+                                            </th>
                                             <th className="p-2 text-left font-semibold">Roll No</th>
                                             <th className="p-2 text-left font-semibold">Name</th>
                                             <th className="p-2 text-left font-semibold">From</th>
@@ -390,17 +453,25 @@ function AllReports() {
                                             <th className="p-2 text-left font-semibold w-32">Topic</th>
                                             <th className="p-2 text-left font-semibold">Score</th>
                                             <th className="p-2 text-left font-semibold">Time</th>
+                                            <th className="p-2 text-left font-semibold">Submission Type</th>
                                             <th className="p-2 text-left font-semibold">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {groupedResults[date].map((entry, index) => (
                                             <tr key={`${date}-${index}`} className="border-b hover:bg-gray-50">
+                                                <td className="p-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedResults.includes(entry.resultId)}
+                                                        onChange={() => handleSelect(entry.resultId)}
+                                                    />
+                                                </td>
                                                 <td className="p-2">{entry.rollNo}</td>
                                                 <td className="p-2">
                                                     <span className="group relative">
                                                         {entry.name}
-                                                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 -top-8 left-0 z-10">
+                                                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 top-0 left-full ml-2 z-10">
                                                             {entry.email}
                                                         </span>
                                                     </span>
@@ -409,7 +480,7 @@ function AllReports() {
                                                 <td className="p-2 w-32 truncate">
                                                     <span className="group relative">
                                                         {entry.subject}
-                                                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 -top-8 left-0 z-10">
+                                                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 top-0 left-full ml-2 z-10">
                                                             {entry.subject}
                                                         </span>
                                                     </span>
@@ -417,7 +488,7 @@ function AllReports() {
                                                 <td className="p-2 w-32 truncate">
                                                     <span className="group relative">
                                                         {entry.topic}
-                                                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 -top-8 left-0 z-10">
+                                                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 top-0 left-full ml-2 z-10">
                                                             {entry.topic}
                                                         </span>
                                                     </span>
@@ -432,13 +503,43 @@ function AllReports() {
                                                         })
                                                         : "N/A"}
                                                 </td>
+                                                <td className="p-2">{entry.submissionType}</td>
                                                 <td className="p-2">
-                                                    <Link
-                                                        to={`/dashboard/view-answers/${entry.resultId}`}
-                                                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm"
-                                                    >
-                                                        <i className="fa-solid fa-magnifying-glass"></i> View Answers
-                                                    </Link>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="group relative">
+                                                            <Link
+                                                                to={`/dashboard/view-answers/${entry.resultId}`}
+                                                                className="text-blue-600 hover:text-blue-800"
+                                                            >
+                                                                <i className="fas fa-list-check"></i>
+                                                            </Link>
+                                                            <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 top-0 left-full ml-2 z-10">
+                                                                View Answers
+                                                            </span>
+                                                        </span>
+                                                        <span className="group relative">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setPopup({
+                                                                        message: "Are you sure you want to delete this result?<br />Type <strong>YES</strong> to confirm.",
+                                                                        type: "error",
+                                                                        confirmAction: (input) => {
+                                                                            if (input === "YES") {
+                                                                                handleDelete([entry.resultId]);
+                                                                            }
+                                                                        },
+                                                                    });
+                                                                    setConfirmText("");
+                                                                }}
+                                                                className="text-red-600 hover:text-red-800"
+                                                            >
+                                                                <i className="fas fa-trash"></i>
+                                                            </button>
+                                                            <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 top-0 left-full ml-2 z-10">
+                                                                Delete Record
+                                                            </span>
+                                                        </span>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}

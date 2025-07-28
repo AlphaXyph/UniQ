@@ -308,7 +308,7 @@ function Home() {
                                                             <div className="flex sm:flex-col items-center justify-start sm:justify-center gap-1 mt-2 sm:mt-0">
                                                                 <button
                                                                     onClick={() => handleToggleVisibility(q._id, q.isVisible)}
-                                                                    className={`text-${q.isVisible ? "gray" : "black"}-500 hover:text-${q.isVisible ? "gray" : "black"}-600 text-base p-1 rounded-full hover:bg-gray-100 transition`}
+                                                                    className={`${q.isVisible ? "text-green-500 hover:text-green-600" : "text-black-500 hover:text-black-600"} text-base p-1 rounded-full hover:bg-gray-100 transition`}
                                                                     title={q.isVisible ? "Hide Quiz" : "Show Quiz"}
                                                                     disabled={isLoading}
                                                                 >
@@ -360,14 +360,14 @@ function Home() {
                             <button
                                 type="button"
                                 onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                className="text-blue-500 hover:text-blue-700 text-base p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 transition"
+                                className="text-green-500 hover:text-green-600 text-base p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 transition"
                                 aria-label="Toggle filters"
                             >
                                 <i className="fas fa-filter"></i>
                             </button>
                         </div>
                         {isFilterOpen && (
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 border rounded-2xl bg-gray-100 sm:gap-4 mb-4 p-2 sm:p-4 md:p-6">
                                 <div>
                                     <label className="block mb-1 font-semibold text-sm text-gray-700">Subject - Topic</label>
                                     <input

@@ -128,7 +128,7 @@ function Result() {
                     <button
                         type="button"
                         onClick={() => setIsFilterOpen(!isFilterOpen)}
-                        className="text-blue-500 hover:text-blue-700 text-base p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 transition"
+                        className="text-green-500 hover:text-green-600 text-base p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 transition"
                         aria-label="Toggle filters"
                     >
                         <i className="fas fa-filter"></i>
@@ -183,7 +183,7 @@ function Result() {
                         <div key={date} className="mb-6">
                             <h3 className="text-sm font-semibold text-gray-700 mb-2">{date}</h3>
                             <div className="overflow-x-auto">
-                                <table className="w-full border-collapse text-sm">
+                                <table className="w-full border-collapse text-sm no-select">
                                     <thead>
                                         <tr className="bg-gray-200">
                                             <th className="p-2 text-left font-semibold w-32">Subject</th>
@@ -224,12 +224,17 @@ function Result() {
                                                 </td>
                                                 <td className="p-2">
                                                     {canViewAnswersMap[r._id] && (
-                                                        <Link
-                                                            to={`/dashboard/view-answers/${r._id}`}
-                                                            className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm"
-                                                        >
-                                                            <i className="fa-solid fa-magnifying-glass"></i> View Answers
-                                                        </Link>
+                                                        <span className="group relative">
+                                                            <Link
+                                                                to={`/dashboard/view-answers/${r._id}`}
+                                                                className="text-blue-600 hover:text-blue-800"
+                                                            >
+                                                                <i className="fas fa-list-check"></i>
+                                                            </Link>
+                                                            <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 -top-8 left-0 z-10">
+                                                                View Answers
+                                                            </span>
+                                                        </span>
                                                     )}
                                                 </td>
                                             </tr>

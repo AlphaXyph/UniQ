@@ -1,5 +1,21 @@
 const Result = require("../models/result");
 
+const mapResultToReport = (r) => ({
+    resultId: r._id,
+    rollNo: r.rollNo || "N/A",
+    name: `${r.student?.name || "Unknown"} ${r.student?.surname || ""}`.trim(),
+    email: r.student?.email || "No Email",
+    year: r.year || "N/A",
+    branch: r.branch || "N/A",
+    division: r.division || "N/A",
+    from: `${r.year || "N/A"}-${r.branch || "N/A"}-${r.division || "N/A"}`,
+    subject: r.quiz?.subject || "Unknown",
+    topic: r.quiz?.title || "Unknown",
+    score: `${r.score ?? 0}/${r.total ?? 0}`,
+    createdAt: r.createdAt,
+    submissionType: r.submissionType || "N/A",
+});
+
 const getUserResults = async (req, res) => {
     try {
         const results = await Result.find({ student: req.user.id }).populate("quiz", "title subject");
@@ -18,7 +34,8 @@ const getAllResults = async (req, res) => {
             .populate("student", "name surname email")
             .populate("quiz", "title subject");
         const filteredResults = results.filter((r) => r.quiz && r.student);
-        res.json(filteredResults);
+        const mappedResults = filteredResults.map(mapResultToReport);
+        res.json(mappedResults);
     } catch (err) {
         console.error("Get all results error:", err.message, err.stack);
         res.status(500).json({ msg: "Failed to get all results" });
@@ -49,23 +66,11 @@ const getQuizReport = async (req, res) => {
             .populate("quiz", "title subject")
             .sort(sortFields[sortBy]);
 
-        const formattedResults = results
+        const mappedResults = results
             .filter((r) => r.quiz && r.student)
-            .map((r) => ({
-                resultId: r._id,
-                rollNo: r.rollNo || "N/A",
-                name: `${r.student.name || "Unknown"} ${r.student.surname || ""}`.trim(),
-                email: r.student.email || "No Email",
-                year: r.year || "N/A",
-                branch: r.branch || "N/A",
-                division: r.division || "N/A",
-                subject: r.quiz.subject || "Unknown",
-                topic: r.quiz.title || "Unknown",
-                score: `${r.score ?? 0}/${r.total ?? 0}`,
-                createdAt: r.createdAt,
-            }));
+            .map(mapResultToReport);
 
-        res.json(formattedResults);
+        res.json(mappedResults);
     } catch (err) {
         console.error("Get quiz report error:", err.message, err.stack);
         res.status(500).json({ msg: "Failed to get quiz report" });
@@ -144,10 +149,39 @@ const canViewAnswers = async (req, res) => {
     }
 };
 
+const deleteResult = async (req, res) => {
+    if (req.user.role !== "admin") return res.status(403).json({ msg: "Admin access required" });
+    try {
+        const { id } = req.params;
+        await Result.findByIdAndDelete(id);
+        res.json({ msg: "Result deleted successfully" });
+    } catch (err) {
+        console.error("Delete result error:", err.message, err.stack);
+        res.status(500).json({ msg: "Failed to delete result" });
+    }
+};
+
+const deleteManyResults = async (req, res) => {
+    if (req.user.role !== "admin") return res.status(403).json({ msg: "Admin access required" });
+    try {
+        const { ids } = req.body;
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ msg: "No result IDs provided" });
+        }
+        await Result.deleteMany({ _id: { $in: ids } });
+        res.json({ msg: "Results deleted successfully" });
+    } catch (err) {
+        console.error("Delete many results error:", err.message, err.stack);
+        res.status(500).json({ msg: "Failed to delete results" });
+    }
+};
+
 module.exports = {
     getUserResults,
     getAllResults,
     getQuizReport,
     getUserAnswer,
-    canViewAnswers
+    canViewAnswers,
+    deleteResult,
+    deleteManyResults,
 };
