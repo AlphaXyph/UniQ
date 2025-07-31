@@ -1,4 +1,6 @@
 const AdminRegisterURL = require("../models/adminRegisterURL");
+const User = require("../models/user");
+const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 
 // Generate a 16-character random string
@@ -51,7 +53,7 @@ exports.getCurrentURL = async (req, res) => {
         if (!currentURL) {
             console.log("getCurrentURL: No URL found, creating new one...");
             const randomString = generateRandomString();
-            const newURL = `/admin-register/${randomString}`; // Using slash as per previous fix
+            const newURL = `/admin-register/${randomString}`;
             const newAdminURL = new AdminRegisterURL({
                 url: newURL,
                 randomString,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api";
 import Popup from "../components/popup";
@@ -15,7 +15,22 @@ function Register() {
     const [year, setYear] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success" });
+    const [errors, setErrors] = useState({});
+    const [isLoading, setIsLoading] = useState(false);
+    const [showWakeUpMessage, setShowWakeUpMessage] = useState(false);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        let timer;
+        if (isLoading) {
+            timer = setTimeout(() => {
+                setShowWakeUpMessage(true);
+            }, 5000);
+        } else {
+            setShowWakeUpMessage(false);
+        }
+        return () => clearTimeout(timer);
+    }, [isLoading]);
 
     const formatName = (value) => {
         if (!value) return value;
@@ -24,11 +39,6 @@ function Register() {
     };
 
     const formatBranch = (value) => {
-        if (!value) return value;
-        return value.trim().toUpperCase();
-    };
-
-    const formatDivision = (value) => {
         if (!value) return value;
         return value.trim().toUpperCase();
     };
@@ -42,11 +52,12 @@ function Register() {
         return "";
     };
 
+    // In register.jsx
     const validatePassword = (password) => {
         const trimmedPassword = password.trim();
         if (!trimmedPassword) return "Password is required";
         if (trimmedPassword.length < 8) return "Password must be at least 8 characters long";
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%_*?&])[A-Za-z\d@$!%_*?&]{8,}$/;
         if (!passwordRegex.test(trimmedPassword)) {
             return "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character";
         }
@@ -82,14 +93,13 @@ function Register() {
     };
 
     const validateDivision = (division) => {
-        const trimmedDivision = division.trim();
-        if (!trimmedDivision) return "Division is required";
-        if (trimmedDivision.length > 2) return "Division must be 2 characters or less";
+        if (!division) return "Division is required";
+        if (!["A", "B", "C", "D"].includes(division)) return "Division must be A, B, C, or D";
         return "";
     };
 
     const validateRollNo = (rollNo) => {
-        const trimmedRollNo = rollNo.trim();
+        const trimmedRollNo = rollNo.toString().trim();
         if (!trimmedRollNo) return "Roll No is required";
         if (!/^\d{1,3}$/.test(trimmedRollNo) || parseInt(trimmedRollNo) > 999) return "Roll No must be a 3-digit number or less";
         return "";
@@ -97,28 +107,34 @@ function Register() {
 
     const validateYear = (year) => {
         if (!year) return "Year is required";
-        if (!["FY", "SY", "TY", "FOURTH"].includes(year)) return "Invalid year";
+        if (!["FY", "SY", "TY", "4TH"].includes(year)) return "Invalid year";
         return "";
+    };
+
+    const validateForm = () => {
+        const newErrors = {
+            email: validateEmail(email),
+            password: validatePassword(password),
+            confirmPassword: validateConfirmPassword(confirmPassword),
+            name: validateName(name),
+            surname: validateSurname(surname),
+            branch: validateBranch(branch),
+            division: validateDivision(division),
+            rollNo: validateRollNo(rollNo),
+            year: validateYear(year),
+        };
+        setErrors(newErrors);
+        return Object.values(newErrors).every((error) => !error);
     };
 
     const handleRegister = async (e) => {
         e.preventDefault();
-        const emailError = validateEmail(email);
-        const passwordError = validatePassword(password);
-        const confirmPasswordError = validateConfirmPassword(confirmPassword);
-        const nameError = validateName(name);
-        const surnameError = validateSurname(surname);
-        const branchError = validateBranch(branch);
-        const divisionError = validateDivision(division);
-        const rollNoError = validateRollNo(rollNo);
-        const yearError = validateYear(year);
-
-        const errors = [emailError, passwordError, confirmPasswordError, nameError, surnameError, branchError, divisionError, rollNoError, yearError].filter(Boolean);
-        if (errors.length) {
-            setPopup({ message: errors.join("<br />"), type: "error" });
+        if (!validateForm()) {
+            setPopup({ message: "Please fix the errors in the form", type: "error" });
             return;
         }
 
+        setIsLoading(true);
         const formattedData = {
             email: email.toLowerCase().trim(),
             password: password.trim(),
@@ -126,7 +142,7 @@ function Register() {
             name: formatName(name),
             surname: formatName(surname),
             branch: formatBranch(branch),
-            division: formatDivision(division),
+            division,
             rollNo: rollNo.trim(),
             year,
         };
@@ -136,19 +152,29 @@ function Register() {
             setPopup({ message: "Registered! Please login.", type: "success" });
             setTimeout(() => navigate("/"), 2000);
         } catch (err) {
-            console.error("Register error:", err.response?.data || err.message);
             setPopup({ message: err.response?.data?.msg || "Register failed", type: "error" });
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const closePopup = () => {
         setPopup({ message: "", type: "success" });
+        setErrors({});
+        setShowWakeUpMessage(false);
     };
 
     return (
         <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
             <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
                 <Popup message={popup.message} type={popup.type} onClose={closePopup} />
+                {showWakeUpMessage && (
+                    <Popup
+                        message="Waking up the backend, this may take a moment..."
+                        type="info"
+                        onClose={() => setShowWakeUpMessage(false)}
+                    />
+                )}
                 <h2 className="text-lg sm:text-xl font-bold text-gray-800 text-center flex items-center gap-2">
                     <i className="fas fa-user-plus"></i> Register
                 </h2>
@@ -158,115 +184,184 @@ function Register() {
                         <input
                             type="email"
                             placeholder="Email (must end with @ves.ac.in)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, email: validateEmail(email) })}
+                            disabled={isLoading}
                         />
+                        {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                     </div>
-                    <div className="relative">
-                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Password</label>
-                        <input
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Password (8+ chars, mixed case, number, special char)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-2 top-2/3 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs sm:text-sm"
-                        >
-                            <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
-                        </button>
+                    {/* Password Field */}
+                    <div className="mb-4">
+                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">
+                            Password
+                        </label>
+
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Password (8+ chars, mixed case, number, special char)"
+                                className={`w-full p-2 sm:p-3 pr-10 border ${errors.password ? "border-red-500" : "border-gray-300"
+                                    } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                onBlur={() =>
+                                    setErrors({ ...errors, password: validatePassword(password) })
+                                }
+                                disabled={isLoading}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                                disabled={isLoading}
+                            >
+                                <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
+                            </button>
+                        </div>
+
+                        {errors.password && (
+                            <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+                        )}
                     </div>
-                    <div className="relative">
-                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Confirm Password</label>
-                        <input
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Confirm Password"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-2 top-2/3 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs sm:text-sm"
-                        >
-                            <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
-                        </button>
+
+                    {/* Confirm Password Field */}
+                    <div className="mb-4">
+                        <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">
+                            Confirm Password
+                        </label>
+
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Confirm Password"
+                                className={`w-full p-2 sm:p-3 pr-10 border ${errors.confirmPassword ? "border-red-500" : "border-gray-300"
+                                    } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                onBlur={() =>
+                                    setErrors({
+                                        ...errors,
+                                        confirmPassword: validateConfirmPassword(confirmPassword),
+                                    })
+                                }
+                                disabled={isLoading}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                                disabled={isLoading}
+                            >
+                                <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
+                            </button>
+                        </div>
+
+                        {errors.confirmPassword && (
+                            <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>
+                        )}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Name</label>
                         <input
                             type="text"
                             placeholder="Name (max 20 chars)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={name}
                             onChange={(e) => setName(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, name: validateName(name) })}
+                            disabled={isLoading}
                         />
+                        {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Surname</label>
                         <input
                             type="text"
                             placeholder="Surname (max 20 chars)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.surname ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={surname}
                             onChange={(e) => setSurname(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, surname: validateSurname(surname) })}
+                            disabled={isLoading}
                         />
+                        {errors.surname && <p className="text-red-500 text-xs mt-1">{errors.surname}</p>}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Branch</label>
                         <input
                             type="text"
                             placeholder="Branch (max 4 chars)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.branch ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={branch}
                             onChange={(e) => setBranch(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, branch: validateBranch(branch) })}
+                            disabled={isLoading}
                         />
+                        {errors.branch && <p className="text-red-500 text-xs mt-1">{errors.branch}</p>}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Division</label>
-                        <input
-                            type="text"
-                            placeholder="Division (max 2 chars)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                        <select
                             value={division}
                             onChange={(e) => setDivision(e.target.value)}
-                        />
+                            onBlur={() => setErrors({ ...errors, division: validateDivision(division) })}
+                            className={`w-full p-2 sm:p-3 border ${errors.division ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
+                            disabled={isLoading}
+                        >
+                            <option value="">Select Division</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                        </select>
+                        {errors.division && <p className="text-red-500 text-xs mt-1">{errors.division}</p>}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Roll Number</label>
                         <input
                             type="number"
                             placeholder="Roll No (max 3 digits)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.rollNo ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={rollNo}
                             onChange={(e) => setRollNo(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, rollNo: validateRollNo(rollNo) })}
+                            disabled={isLoading}
                         />
+                        {errors.rollNo && <p className="text-red-500 text-xs mt-1">{errors.rollNo}</p>}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Year</label>
                         <select
                             value={year}
                             onChange={(e) => setYear(e.target.value)}
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            onBlur={() => setErrors({ ...errors, year: validateYear(year) })}
+                            className={`w-full p-2 sm:p-3 border ${errors.year ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
+                            disabled={isLoading}
                         >
                             <option value="">Select Year</option>
                             <option value="FY">FY</option>
                             <option value="SY">SY</option>
                             <option value="TY">TY</option>
-                            <option value="FOURTH">FOURTH</option>
+                            <option value="4TH">4TH</option>
                         </select>
+                        {errors.year && <p className="text-red-500 text-xs mt-1">{errors.year}</p>}
                     </div>
                     <div className="col-span-full flex justify-center">
                         <button
                             type="submit"
-                            className="px-6 py-2 w-1/3 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm"
+                            className="px-6 py-2 w-1/3 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm relative"
+                            disabled={isLoading}
                         >
-                            Register
+                            {isLoading ? (
+                                <div className="flex items-center justify-center">
+                                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                                    <span className="ml-2">Registering...</span>
+                                </div>
+                            ) : (
+                                "Register"
+                            )}
                         </button>
                     </div>
                     <div className="col-span-full flex flex-col items-center justify-center">
@@ -275,6 +370,7 @@ function Register() {
                             type="button"
                             onClick={() => navigate("/")}
                             className="text-blue-500 text-sm my-2 hover:underline"
+                            disabled={isLoading}
                         >
                             Login Here
                         </button>

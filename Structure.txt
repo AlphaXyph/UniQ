@@ -1,64 +1,72 @@
 UniQuiz/
-├── frontend/                       # Frontend application (React & Tailwind)
+├── frontend/                                # Frontend application (React & Tailwind)
 │   ├── src/
-│   │   ├── components/             # Reusable UI components
-│   │   │   ├── popup.jsx           # Popup component for notifications
-│   │   │   └── aiChatbot.jsx       # AI component using Gemini API
+│   │   ├── components/                      # Reusable UI components
+│   │   │   ├── popup.jsx                    # Popup component for notifications
+│   │   │   └── aiChatbot.jsx                # AI component using Gemini API
 │   │   │
 │   │   ├── pages/
-│   │   │   ├── dashboard/          # Dashboard-related components
-│   │   │   │   ├── home.jsx        # Home page component
-│   │   │   │   ├── allReports.jsx  # All Reports page
-│   │   │   │   ├── result.jsx      # Result page for users
-│   │   │   │   ├── createQuiz.jsx  # Create Quiz page
-│   │   │   │   ├── profile.jsx     # Profile page
-│   │   │   │   ├── userManagement.jsx  # User management
-│   │   │   │   ├── quizReport.jsx  # Individual quiz reports
-│   │   │   │   ├── attemptQuiz.jsx # Attempt Quiz page
-│   │   │   │   └── editQuiz.jsx    # Edit Quiz page
-│   │   │   ├── login.jsx           # Login page
-│   │   │   ├── register.jsx        # User registration page
-│   │   │   ├── adminRegister.jsx   # Admin registration page (new)
-│   │   │   └── dashboard.jsx       # Main dashboard with admin URL controls (corrected from Dahboard.jsx)
+│   │   │   ├── dashboard/                   # Dashboard-related components
+│   │   │   │   ├── admin/                   # Admin-only dashboard pages
+│   │   │   │   │   ├── allReports.jsx           # All Reports page
+│   │   │   │   │   ├── createQuiz.jsx           # Create Quiz page
+│   │   │   │   │   ├── editQuiz.jsx             # Edit Quiz page
+│   │   │   │   │   ├── quizReport.jsx           # Individual quiz reports
+│   │   │   │   │   └── userManagement.jsx       # User management page
+│   │   │   │   │
+│   │   │   │   ├── user/                    # User-only dashboard pages
+│   │   │   │   │   ├── attemptQuiz.jsx          # Attempt Quiz page
+│   │   │   │   │   └── result.jsx               # Result page for users
+│   │   │   │   │
+│   │   │   │   └── common/                  # Pages shared between user and admin
+│   │   │   │       ├── home.jsx                 # Home page component
+│   │   │   │       └── profile.jsx              # Profile page
+│   │   │   │
+│   │   │   ├── login.jsx                    # Login page
+│   │   │   ├── register.jsx                 # User registration page
+│   │   │   ├── adminRegister.jsx            # Admin registration page 
+│   │   │   └── dashboard.jsx                # Main dashboard with admin/user URL controls
 │   │   │
-│   │   ├── api.js                 # API service for HTTP requests
-│   │   ├── App.jsx                # Main App with routing
-│   │   └── index.html             # HTML entry with Font Awesome CDN
+│   │   ├── api.js                           # API service for HTTP requests
+│   │   ├── App.jsx                          # Main App with routing
+│   │   └── index.html                       # HTML entry with Font Awesome CDN
 │   │
-│   ├── .env                       # Frontend environment variables (VITE_BASE_URL=http://localhost:3000)
-│   ├── package.json               # Frontend dependencies and scripts
-│   ├── tailwind.config.js         # Tailwind CSS configuration
-│   └── .gitignore                 # Frontend Git ignore
+│   ├── .env                                 # Frontend environment variables
+│   ├── package.json                         # Frontend dependencies and scripts
+│   ├── tailwind.config.js                   # Tailwind CSS configuration
+│   └── .gitignore                           # Frontend Git ignore
 │
-├── backend/                       # Backend application (Node.js/Express)
-│   ├── models/                    # Database models
-│   │   ├── quiz.js                # Quiz model
-│   │   ├── user.js                # User model
-│   │   ├── result.js              # Result model
-│   │   └── adminRegisterURL.js    # Model or utility for admin registration URL (new)
+├── backend/                                 # Backend application (Node.js/Express)
+│   ├── models/                              # Database models
+│   │   ├── quiz.js                          # Quiz model
+│   │   ├── user.js                          # User model
+│   │   ├── otp.js                           # OTP model
+│   │   ├── result.js                        # Result model
+│   │   └── adminRegisterURL.js              # Model or utility for admin registration URL 
 │   │
-│   ├── controllers/               # Business logic controllers
-│   │   ├── quizController.js      # Quiz-related endpoints
-│   │   ├── authController.js      # Authentication endpoints
-│   │   ├── resultController.js    # Result-related endpoints
-│   │   └── adminRegisterController.js  # Admin registration URL generation (new)
+│   ├── controllers/                         # Business logic controllers
+│   │   ├── quizController.js                # Quiz-related endpoints
+│   │   ├── authController.js                # Authentication endpoints
+│   │   ├── resultController.js              # Result-related endpoints
+│   │   └── adminRegisterController.js       # Admin registration URL generation 
 │   │
-│   ├── routes/                    # API routes
-│   │   ├── authRoutes.js          # Authentication routes
-│   │   ├── resultRoutes.js        # Result routes
-│   │   ├── quizRoutes.js          # Quiz routes
-│   │   └── adminRegisterRoutes.js # Admin registration routes (new)
+│   ├── routes/                              # API routes
+│   │   ├── authRoutes.js                    # Authentication routes
+│   │   ├── resultRoutes.js                  # Result routes
+│   │   ├── quizRoutes.js                    # Quiz routes
+│   │   └── adminRegisterRoutes.js           # Admin registration routes 
 │   │
-│   ├── middleware/                # Middleware
-│   │   └── authMiddleware.js      # Authentication middleware (e.g., JWT)
+│   ├── middleware/                          # Middleware
+│   │   └── authMiddleware.js                # Authentication middleware (e.g., JWT)
 │   │
-│   ├── config/                    # Configuration files
-│   │   └── db.js                  # Database connection (e.g., MongoDB)
+│   ├── config/                              # Configuration files
+│   │   ├── db.js                            # Database connection (e.g., MongoDB)
+│   │   └── sendEmail.js                     # SMTP using nodemailer
 │   │
-│   ├── .env                       # Backend environment variables
-│   ├── server.js                  # Backend server entry point
-│   ├── package.json               # Backend dependencies and scripts
-│   └── .gitignore                 # Backend Git ignore
+│   ├── .env                                 # Backend environment variables
+│   ├── server.js                            # Backend server entry point
+│   ├── package.json                         # Backend dependencies and scripts
+│   └── .gitignore                           # Backend Git ignore
 │
-├── .gitignore                     # Root Git ignore
-└── README.md                      # Project documentation
+├── .gitignore                               # Root Git ignore
+└── README.md                                # Project documentation

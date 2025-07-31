@@ -13,18 +13,16 @@ function AdminRegister() {
     const [showPassword, setShowPassword] = useState(false);
     const [popup, setPopup] = useState({ message: "", type: "success" });
     const [isValidUrl, setIsValidUrl] = useState(null); // null = loading, true = valid, false = invalid
+    const [errors, setErrors] = useState({});
     const navigate = useNavigate();
 
     // Validate randomString on mount
     useEffect(() => {
         const validateUrl = async () => {
             try {
-                console.log("AdminRegister: Validating randomString:", randomString);
                 await API.post("/admin-register-url/validate-admin-url", { randomString });
                 setIsValidUrl(true);
-                console.log("AdminRegister: URL is valid");
             } catch (err) {
-                console.error("AdminRegister: URL validation error:", err.response?.data || err.message);
                 setIsValidUrl(false);
                 setPopup({ message: err.response?.data?.msg || "Invalid or expired registration URL", type: "error" });
                 // Redirect to login after 2 seconds
@@ -81,17 +79,22 @@ function AdminRegister() {
         return "";
     };
 
+    const validateForm = () => {
+        const newErrors = {
+            email: validateEmail(email),
+            password: validatePassword(password),
+            confirmPassword: validateConfirmPassword(confirmPassword),
+            name: validateName(name),
+            surname: validateSurname(surname),
+        };
+        setErrors(newErrors);
+        return Object.values(newErrors).every((error) => !error);
+    };
+
     const handleRegister = async (e) => {
         e.preventDefault();
-        const emailError = validateEmail(email);
-        const passwordError = validatePassword(password);
-        const confirmPasswordError = validateConfirmPassword(confirmPassword);
-        const nameError = validateName(name);
-        const surnameError = validateSurname(surname);
-
-        const errors = [emailError, passwordError, confirmPasswordError, nameError, surnameError].filter(Boolean);
-        if (errors.length) {
-            setPopup({ message: errors.join("<br />"), type: "error" });
+        if (!validateForm()) {
+            setPopup({ message: "Please fix the errors in the form", type: "error" });
             return;
         }
 
@@ -109,13 +112,13 @@ function AdminRegister() {
             setPopup({ message: "Admin registered! Please login.", type: "success" });
             setTimeout(() => navigate("/"), 2000);
         } catch (err) {
-            console.error("Admin register error:", err.response?.data || err.message);
             setPopup({ message: err.response?.data?.msg || "Admin registration failed", type: "error" });
         }
     };
 
     const closePopup = () => {
         setPopup({ message: "", type: "success" });
+        setErrors({});
     };
 
     // Show loading state while validating
@@ -150,19 +153,22 @@ function AdminRegister() {
                         <input
                             type="email"
                             placeholder="Email (must end with @ves.ac.in)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, email: validateEmail(email) })}
                         />
+                        {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                     </div>
                     <div className="relative">
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Password</label>
                         <input
                             type={showPassword ? "text" : "password"}
                             placeholder="Password (8+ chars, mixed case, number, special char)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.password ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, password: validatePassword(password) })}
                         />
                         <button
                             type="button"
@@ -171,15 +177,17 @@ function AdminRegister() {
                         >
                             <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
                         </button>
+                        {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                     </div>
                     <div className="relative">
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Confirm Password</label>
                         <input
                             type={showPassword ? "text" : "password"}
                             placeholder="Confirm Password"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.confirmPassword ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, confirmPassword: validateConfirmPassword(confirmPassword) })}
                         />
                         <button
                             type="button"
@@ -188,26 +196,31 @@ function AdminRegister() {
                         >
                             <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
                         </button>
+                        {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Name</label>
                         <input
                             type="text"
                             placeholder="Name (max 20 chars)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={name}
                             onChange={(e) => setName(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, name: validateName(name) })}
                         />
+                        {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                     </div>
                     <div>
                         <label className="block mb-1 font-semibold text-sm sm:text-base text-gray-700">Surname</label>
                         <input
                             type="text"
                             placeholder="Surname (max 20 chars)"
-                            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                            className={`w-full p-2 sm:p-3 border ${errors.surname ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm`}
                             value={surname}
                             onChange={(e) => setSurname(e.target.value)}
+                            onBlur={() => setErrors({ ...errors, surname: validateSurname(surname) })}
                         />
+                        {errors.surname && <p className="text-red-500 text-xs mt-1">{errors.surname}</p>}
                     </div>
                     <div className="col-span-full flex justify-center">
                         <button

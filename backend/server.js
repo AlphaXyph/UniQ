@@ -13,6 +13,7 @@ app.use(express.json()); // Body parser for JSON
 // Routes
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/quiz", require("./routes/quizRoutes"));
+app.use("/api/quiz", require("./routes/quizSessionRoutes"));
 app.use("/api/result", require("./routes/resultRoutes"));
 app.use("/api/admin-register-url", require("./routes/adminRegisterRoutes"));
 

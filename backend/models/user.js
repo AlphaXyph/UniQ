@@ -3,12 +3,21 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema({
     email: {
         type: String,
-        required: true,
+        required: [true, "Email is required"],
         unique: true,
+        trim: true,
+        lowercase: true,
+        match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email format"],
+        validate: {
+            validator: function (value) {
+                return value.endsWith("@ves.ac.in");
+            },
+            message: "Email must end with @ves.ac.in",
+        },
     },
     password: {
         type: String,
-        required: true,
+        required: [true, "Password is required"],
     },
     role: {
         type: String,
@@ -17,34 +26,58 @@ const userSchema = new mongoose.Schema({
     },
     name: {
         type: String,
-        required: true,
-        maxlength: 20,
+        required: [true, "Name is required"],
+        maxlength: [20, "Name must be 20 characters or less"],
+        trim: true,
+        set: (value) => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase(),
     },
     surname: {
         type: String,
-        required: true,
-        maxlength: 20,
+        required: [true, "Surname is required"],
+        maxlength: [20, "Surname must be 20 characters or less"],
+        trim: true,
+        set: (value) => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase(),
     },
     branch: {
         type: String,
-        maxlength: 15,
-        required: function () { return this.role === "user"; },
+        maxlength: [4, "Branch must be 4 characters or less"],
+        required: function () {
+            return this.role === "user";
+        },
+        trim: true,
+        uppercase: true,
     },
     division: {
         type: String,
-        maxlength: 1,
-        required: function () { return this.role === "user"; },
+        enum: {
+            values: ["A", "B", "C", "D"],
+            message: "Division must be one of A, B, C, or D",
+        },
+        required: function () {
+            return this.role === "user";
+        },
     },
     rollNo: {
         type: Number,
-        maxlength: 3,
-        required: function () { return this.role === "user"; },
+        required: function () {
+            return this.role === "user";
+        },
+        min: [1, "Roll No must be at least 1"],
+        max: [999, "Roll No must be a 3-digit number or less"],
     },
     year: {
         type: String,
-        enum: ["FY", "SY", "TY", "FOURTH"],
-        required: function () { return this.role === "user"; },
+        enum: {
+            values: ["FY", "SY", "TY", "4TH"],
+            message: "Year must be one of FY, SY, TY, or 4TH",
+        },
+        required: function () {
+            return this.role === "user";
+        },
     },
-}, { timestamps: true }); // Add timestamps for createdAt and updatedAt
+    lastProfileUpdate: {
+        type: Date
+    }
+}, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);
